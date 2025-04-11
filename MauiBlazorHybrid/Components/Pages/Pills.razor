@@ -1,0 +1,135 @@
+﻿@page "/pills"
+@using MauiBlazorHybrid.Models
+@using MauiBlazorHybrid.Services
+@inject IPillService PillService
+@inject NavigationManager NavigationManager
+
+<h1>Your Pills</h1>
+
+<button class="add-pill-button" @onclick="NavigateToAddPill">Add New Pill</button>
+
+@if (pills == null)
+{
+    <p>Loading...</p>
+}
+else if (!pills.Any())
+{
+    <p>No pills added yet. Click 'Add New Pill' to get started.</p>
+}
+else
+{
+    <div class="pills-list">
+        @foreach (var pill in pills)
+        {
+            <div class="pill-card">
+                <div class="pill-header">
+                    <h2>@pill.Name</h2>
+                    <button class="edit-button" @onclick="() => NavigateToEdit(pill.Id)">
+                        Edit
+                    </button>
+                </div>
+
+                <div class="dosages-list">
+                    @if (pill.Dosages.Any())
+                    {
+                        <h3>Dosage Schedule</h3>
+                        <ul>
+                            @foreach (var dosage in pill.Dosages)
+                            {
+                                <li>
+                                    @($"Take every {dosage.Repetition} {dosage.Frequency} at {dosage.Time?.ToString("HH:mm")}")
+                                </li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <p>No dosages scheduled</p>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<style>
+    .pills-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .pill-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 1rem;
+        background-color: #fff;
+    }
+
+    .pill-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .pill-header h2 {
+        margin: 0;
+    }
+
+    .dosages-list {
+        margin-left: 1rem;
+    }
+
+    .dosages-list ul {
+        list-style-type: none;
+        padding-left: 0;
+    }
+
+    .dosages-list li {
+        margin: 0.5rem 0;
+    }
+
+    .edit-button {
+        padding: 0.5rem 1rem;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .add-pill-button {
+        padding: 0.75rem 1.5rem;
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-bottom: 1rem;
+    }
+
+    .edit-button:hover, .add-pill-button:hover {
+        opacity: 0.9;
+    }
+</style>
+
+@code {
+    private List<Pill>? pills;
+
+    protected override async Task OnInitializedAsync()
+    {
+        pills = await PillService.GetPillsAsync();
+    }
+
+    private void NavigateToAddPill()
+    {
+        NavigationManager.NavigateTo("/addpill");
+    }
+
+    private void NavigateToEdit(int pillId)
+    {
+        NavigationManager.NavigateTo($"/editpill/{pillId}");
+    }
+}

@@ -1,0 +1,84 @@
+﻿@page "/addpill"
+@using MauiBlazorHybrid.Models
+@using MauiBlazorHybrid.Services
+@inject IPillService PillService
+@inject NavigationManager NavigationManager
+
+<h1>Add a New Pill</h1>
+
+<form>
+    <label for="pillName">Pill Name:</label>
+    <input id="pillName" type="text" @bind="PillName" />
+
+    <h3>Dosages</h3>
+    @foreach (var (dosage, index) in Dosages.Select((d, i) => (d, i)))
+    {
+        <div class="dosage-row">
+            <label>Time:</label>
+            <input type="time"
+                   value="@(dosage.Time?.ToString("HH:mm"))"
+                   @onchange="@(e => UpdateDosageTime(index, e.Value?.ToString()))" />
+
+            <label>Repetition:</label>
+            <input type="number" @bind="dosage.Repetition" />
+
+            <label>Frequency:</label>
+            <select @bind="dosage.Frequency">
+                <option value="Days">Days</option>
+                <option value="Weeks">Weeks</option>
+                <option value="Months">Months</option>
+            </select>
+
+            @if (index == Dosages.Count - 1)
+            {
+                <button type="button" @onclick="AddNewDosageRow">Add Another Dosage</button>
+            }
+        </div>
+    }
+
+    @if (!Dosages.Any())
+    {
+        <button type="button" @onclick="AddNewDosageRow">Add Dosage</button>
+    }
+
+    <button type="submit" @onclick="HandleSubmit">Submit</button>
+</form>
+
+@code {
+    private string PillName { get; set; } = string.Empty;
+    private List<PillDosage> Dosages { get; set; } = new();
+
+    private void UpdateDosageTime(int index, string? timeStr)
+    {
+        if (string.IsNullOrEmpty(timeStr))
+        {
+            Dosages[index].Time = default;
+            return;
+        }
+
+        if (TimeOnly.TryParse(timeStr, out var time))
+        {
+            Dosages[index].Time = time;
+        }
+    }
+
+    private void AddNewDosageRow()
+    {
+        Dosages.Add(new PillDosage { Frequency = "Days" });
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (string.IsNullOrWhiteSpace(PillName) || !Dosages.Any())
+            return;
+
+        var pill = new Pill
+            {
+                Name = PillName,
+                Dosages = Dosages
+            };
+
+        await PillService.AddPillAsync(pill);
+        NavigationManager.NavigateTo("/pills");
+    }
+}

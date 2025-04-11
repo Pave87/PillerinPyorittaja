@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+      <BaseIntermediateOutputPath Condition=" '$(OS)' == 'Windows_NT' ">C:\Intermediate\$(ProjectName)</BaseIntermediateOutputPath>
+      <BaseIntermediateOutputPath Condition=" '$(OS)' != 'Windows_NT' ">/tmp/Intermediate/$(ProjectName)</BaseIntermediateOutputPath>
+  </PropertyGroup>
+</Project>
