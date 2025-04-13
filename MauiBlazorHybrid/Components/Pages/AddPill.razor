@@ -21,14 +21,29 @@
                    @bind:event="oninput" />
 
             <label>Repetition:</label>
-            <input type="number" @bind="dosage.Repetition" />
+            <input type="number" @bind="dosage.Repetition" style="width: 40px;" />
 
             <label>Frequency:</label>
             <select @bind="dosage.Frequency">
                 <option value="Days">Days</option>
                 <option value="Weeks">Weeks</option>
-                <option value="Months">Months</option>
             </select>
+
+            @if (dosage.Frequency == "Weeks")
+            {
+                <div class="weekday-selection">
+                    <label>Select Weekdays:</label>
+                    @foreach (var day in WeekDays)
+                    {
+                        <label class="weekday-checkbox">
+                            <input type="checkbox" 
+                                   checked="@(dosage.SelectedDays?.Contains(day) ?? false)"
+                                   @onchange="@(e => ToggleWeekday(dosage, day, (bool)e.Value))" />
+                            @day
+                        </label>
+                    }
+                </div>
+            }
 
             @if (index == Dosages.Count - 1)
             {
@@ -46,12 +61,25 @@
     <button type="button" @onclick="Cancel">Cancel</button>
 </form>
 
+<style>
+    .weekday-selection {
+        margin: 10px 0;
+    }
+    .weekday-checkbox {
+        margin-right: 10px;
+    }
+    .monthday-selection {
+        margin: 10px 0;
+    }
+</style>
+
 @code {
     [Parameter]
     public int? Id { get; set; }
 
     private string PillName { get; set; } = string.Empty;
     private List<PillDosage> Dosages { get; set; } = new();
+    private readonly string[] WeekDays = new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
 
     protected override async Task OnInitializedAsync()
     {
@@ -69,7 +97,8 @@
                         PillId = d.PillId,
                         Time = d.Time,
                         Repetition = d.Repetition,
-                        Frequency = d.Frequency
+                        Frequency = d.Frequency,
+                        SelectedDays = d.SelectedDays
                     }).ToList();
                 }
                 else
@@ -87,8 +116,29 @@
 
     private void AddNewDosageRow()
     {
-        Dosages.Add(new PillDosage { Frequency = "Days" });
+        Dosages.Add(new PillDosage { 
+            Frequency = "Days",
+            SelectedDays = new List<string>(),
+                Repetition = 1
+        });
         StateHasChanged();
+    }
+
+    private void ToggleWeekday(PillDosage dosage, string day, bool isChecked)
+    {
+        if (dosage.SelectedDays == null)
+        {
+            dosage.SelectedDays = new List<string>();
+        }
+
+        if (isChecked && !dosage.SelectedDays.Contains(day))
+        {
+            dosage.SelectedDays.Add(day);
+        }
+        else if (!isChecked && dosage.SelectedDays.Contains(day))
+        {
+            dosage.SelectedDays.Remove(day);
+        }
     }
 
     private async Task HandleSubmit()

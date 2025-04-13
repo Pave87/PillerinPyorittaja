@@ -14,5 +14,6 @@ public class PillDosage
     public int PillId { get; set; }
     public TimeOnly? Time { get; set; }
     public int Repetition { get; set; }
-    public string Frequency { get; set; } = "Days";
+    public string Frequency { get; set; }
+    public List<string> SelectedDays { get; set; } = new();
 }
