@@ -18,7 +18,7 @@
             <label>Time:</label>
             <input type="time" 
                    @bind="dosage.Time"
-                   @bind:format="HH:mm" />
+                   @bind:event="oninput" />
 
             <label>Repetition:</label>
             <input type="number" @bind="dosage.Repetition" />
@@ -59,23 +59,18 @@
         {
             if (Id.HasValue)
             {
-                // Edit mode - load existing pill with times
                 var pill = await PillService.GetPillAsync(Id.Value);
                 if (pill != null)
                 {
                     PillName = pill.Name;
-                    // Create new instances to avoid reference issues
                     Dosages = pill.Dosages.Select(d => new PillDosage
                     {
                         Id = d.Id,
                         PillId = d.PillId,
-                        Time = d.Time, // Keep the existing time
+                        Time = d.Time,
                         Repetition = d.Repetition,
                         Frequency = d.Frequency
                     }).ToList();
-
-                    // Force UI refresh after loading data
-                    await InvokeAsync(StateHasChanged);
                 }
                 else
                 {
@@ -92,12 +87,7 @@
 
     private void AddNewDosageRow()
     {
-        // Add mode - new dosage with null time
-        Dosages.Add(new PillDosage 
-        { 
-            Frequency = "Days",
-            Time = null // Explicitly set time to null for new dosages
-        });
+        Dosages.Add(new PillDosage { Frequency = "Days" });
         StateHasChanged();
     }
 
@@ -110,7 +100,6 @@
 
             if (Id.HasValue)
             {
-                // Update existing pill
                 var existingPill = await PillService.GetPillAsync(Id.Value);
                 if (existingPill != null)
                 {
@@ -121,7 +110,6 @@
             }
             else
             {
-                // Create new pill
                 var newPill = new Pill
                 {
                     Name = PillName,
