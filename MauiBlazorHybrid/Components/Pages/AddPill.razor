@@ -1,10 +1,11 @@
 ﻿@page "/addpill"
+@page "/addpill/{Id:int?}"
 @using MauiBlazorHybrid.Models
 @using MauiBlazorHybrid.Services
 @inject IPillService PillService
 @inject NavigationManager NavigationManager
 
-<h1>Add a New Pill</h1>
+<h1>@(Id.HasValue ? "Edit Pill" : "Add a New Pill")</h1>
 
 <form>
     <label for="pillName">Pill Name:</label>
@@ -15,9 +16,9 @@
     {
         <div class="dosage-row">
             <label>Time:</label>
-            <input type="time"
-                   value="@(dosage.Time?.ToString("HH:mm"))"
-                   @onchange="@(e => UpdateDosageTime(index, e.Value?.ToString()))" />
+            <input type="time" 
+                   @bind="dosage.Time"
+                   @bind:format="HH:mm" />
 
             <label>Repetition:</label>
             <input type="number" @bind="dosage.Repetition" />
@@ -41,44 +42,104 @@
         <button type="button" @onclick="AddNewDosageRow">Add Dosage</button>
     }
 
-    <button type="submit" @onclick="HandleSubmit">Submit</button>
+    <button type="button" @onclick="HandleSubmit">@(Id.HasValue ? "Save Changes" : "Add Pill")</button>
+    <button type="button" @onclick="Cancel">Cancel</button>
 </form>
 
 @code {
+    [Parameter]
+    public int? Id { get; set; }
+
     private string PillName { get; set; } = string.Empty;
     private List<PillDosage> Dosages { get; set; } = new();
 
-    private void UpdateDosageTime(int index, string? timeStr)
+    protected override async Task OnInitializedAsync()
     {
-        if (string.IsNullOrEmpty(timeStr))
+        try
         {
-            Dosages[index].Time = default;
-            return;
-        }
+            if (Id.HasValue)
+            {
+                // Edit mode - load existing pill with times
+                var pill = await PillService.GetPillAsync(Id.Value);
+                if (pill != null)
+                {
+                    PillName = pill.Name;
+                    // Create new instances to avoid reference issues
+                    Dosages = pill.Dosages.Select(d => new PillDosage
+                    {
+                        Id = d.Id,
+                        PillId = d.PillId,
+                        Time = d.Time, // Keep the existing time
+                        Repetition = d.Repetition,
+                        Frequency = d.Frequency
+                    }).ToList();
 
-        if (TimeOnly.TryParse(timeStr, out var time))
+                    // Force UI refresh after loading data
+                    await InvokeAsync(StateHasChanged);
+                }
+                else
+                {
+                    NavigationManager.NavigateTo("/pills");
+                }
+            }
+        }
+        catch (Exception ex)
         {
-            Dosages[index].Time = time;
+            Console.WriteLine($"Error loading pill: {ex.Message}");
+            NavigationManager.NavigateTo("/pills");
         }
     }
 
     private void AddNewDosageRow()
     {
-        Dosages.Add(new PillDosage { Frequency = "Days" });
+        // Add mode - new dosage with null time
+        Dosages.Add(new PillDosage 
+        { 
+            Frequency = "Days",
+            Time = null // Explicitly set time to null for new dosages
+        });
+        StateHasChanged();
     }
 
     private async Task HandleSubmit()
     {
-        if (string.IsNullOrWhiteSpace(PillName) || !Dosages.Any())
-            return;
+        try
+        {
+            if (string.IsNullOrWhiteSpace(PillName) || !Dosages.Any())
+                return;
 
-        var pill = new Pill
+            if (Id.HasValue)
             {
-                Name = PillName,
-                Dosages = Dosages
-            };
+                // Update existing pill
+                var existingPill = await PillService.GetPillAsync(Id.Value);
+                if (existingPill != null)
+                {
+                    existingPill.Name = PillName;
+                    existingPill.Dosages = Dosages;
+                    await PillService.UpdatePillAsync(existingPill);
+                }
+            }
+            else
+            {
+                // Create new pill
+                var newPill = new Pill
+                {
+                    Name = PillName,
+                    Dosages = Dosages
+                };
+                await PillService.AddPillAsync(newPill);
+            }
 
-        await PillService.AddPillAsync(pill);
+            NavigationManager.NavigateTo("/pills");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving pill: {ex.Message}");
+        }
+    }
+
+    private void Cancel()
+    {
         NavigationManager.NavigateTo("/pills");
     }
 }

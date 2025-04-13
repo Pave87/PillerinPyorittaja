@@ -27,6 +27,7 @@ else
                     <button class="edit-button" @onclick="() => NavigateToEdit(pill.Id)">
                         Edit
                     </button>
+
                 </div>
 
                 <div class="dosages-list">
@@ -130,6 +131,7 @@ else
 
     private void NavigateToEdit(int pillId)
     {
-        NavigationManager.NavigateTo($"/editpill/{pillId}");
+        NavigationManager.NavigateTo($"/addpill/{pillId}");
     }
+
 }

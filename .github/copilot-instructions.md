@@ -1,0 +1,1 @@
+Always respond with full code for edited files, even if only a small part of the file is changed.
