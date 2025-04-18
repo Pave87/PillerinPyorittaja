@@ -1,5 +1,6 @@
 ﻿using MauiBlazorHybrid.Services;
 using Microsoft.Extensions.Logging;
+using CommunityToolkit.Maui;
 
 namespace MauiBlazorHybrid
 {
@@ -10,19 +11,21 @@ namespace MauiBlazorHybrid
             var builder = MauiApp.CreateBuilder();
             builder
                 .UseMauiApp<App>()
+                .UseMauiCommunityToolkit()
                 .ConfigureFonts(fonts =>
                 {
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+                    fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
                 });
 
             builder.Services.AddMauiBlazorWebView();
-            builder.Services.AddSingleton<IPillService, PillService>();
-
-
 #if DEBUG
             builder.Services.AddBlazorWebViewDeveloperTools();
-    		builder.Logging.AddDebug();
 #endif
+
+            // Register services
+            builder.Services.AddSingleton<IPillService, PillService>();
+            builder.Services.AddSingleton<MauiBlazorHybrid.Services.INotificationService, NotificationService>();
 
             return builder.Build();
         }
