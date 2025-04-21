@@ -116,7 +116,7 @@ namespace MauiBlazorHybrid.Services
                     NotificationId = notificationId,
                     ScheduleTime = scheduleTime,
                     Title = $"Time to take {pill.Name}",
-                    Message = $"Take your {pill.Name} medication",
+                    Message = $"Take {dosage.AmountTaken} {(dosage.AmountTaken == 1 ? "pill" : "pills")} of {pill.Name}",
                     RepeatDays = repeatDays,
                     PillId = pill.Id,
                     DosageId = dosage.Id

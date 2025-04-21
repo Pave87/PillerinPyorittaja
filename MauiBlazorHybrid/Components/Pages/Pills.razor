@@ -46,6 +46,10 @@ else
                     </div>
                 </div>
 
+                <div class="pill-info">
+                    <p>Remaining: @pill.Quantity</p>
+                </div>
+
                 <div class="dosages-list">
                     @if (pill.Dosages.Any())
                     {
@@ -53,19 +57,22 @@ else
                         <ul>
                             @foreach (var dosage in pill.Dosages)
                             {
-                                <li>
-                                    @if (dosage.Frequency == "Days")
-                                    {
-                                        @($"Take every {dosage.Repetition} {(dosage.Repetition == 1 ? "day" : "days")} at {dosage.Time?.ToString("HH:mm")}")
-                                    }
-                                    else if (dosage.Frequency == "Weeks")
-                                    {
-                                        <div>
-                                            Take weekly on: 
-                                            @string.Join(", ", dosage.SelectedDays ?? new List<string>())
-                                            at @dosage.Time?.ToString("HH:mm")
-                                        </div>
-                                    }
+                                <li class="dosage-item">
+                                    <div>
+                                        @if (dosage.Frequency == "Days")
+                                        {
+                                            @($"Take {dosage.AmountTaken} {(dosage.AmountTaken == 1 ? "pill" : "pills")} every {dosage.Repetition} {(dosage.Repetition == 1 ? "day" : "days")} at {dosage.Time?.ToString("HH:mm")}")
+                                        }
+                                        else if (dosage.Frequency == "Weeks")
+                                        {
+                                            <div>
+                                                Take {dosage.AmountTaken} {(dosage.AmountTaken == 1 ? "pill" : "pills")} weekly on:
+                                                @string.Join(", ", dosage.SelectedDays ?? new List<string>())
+                                                at @dosage.Time?.ToString("HH:mm")
+                                            </div>
+                                        }
+                                    </div>
+                                    <button class="take-pill-button" @onclick="() => TakePillDose(pill.Id, dosage.AmountTaken)">Take Dose</button>
                                 </li>
                             }
                         </ul>
@@ -103,29 +110,37 @@ else
         margin-bottom: 1rem;
     }
 
-    .pill-header h2 {
-        margin: 0;
-        color: #333;
-    }
+        .pill-header h2 {
+            margin: 0;
+            color: #333;
+        }
 
     .pill-actions {
         display: flex;
         gap: 0.5rem;
     }
 
+    .pill-info {
+        margin-bottom: 1rem;
+        font-weight: bold;
+    }
+
     .dosages-list {
         margin-left: 1rem;
     }
 
-    .dosages-list ul {
-        list-style-type: none;
-        padding-left: 0;
-    }
+        .dosages-list ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
 
-    .dosages-list li {
-        margin: 0.5rem 0;
-        color: #666;
-    }
+        .dosages-list li {
+            margin: 0.5rem 0;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
     .edit-button, .delete-button {
         padding: 0.5rem 1rem;
@@ -143,6 +158,17 @@ else
     .delete-button {
         background-color: #dc3545;
         color: white;
+    }
+
+    .take-pill-button {
+        padding: 0.5rem 0.75rem;
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 500;
+        margin-left: 0.5rem;
     }
 
     .add-pill-button {
@@ -175,8 +201,15 @@ else
         margin-top: 0.5rem;
     }
 
-    .edit-button:hover, .delete-button:hover, .add-pill-button:hover, .permission-button:hover {
-        opacity: 0.9;
+        .edit-button:hover, .delete-button:hover, .add-pill-button:hover, .permission-button:hover, .take-pill-button:hover {
+            opacity: 0.9;
+        }
+
+    .dosage-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
     }
 </style>
 
@@ -225,5 +258,22 @@ else
             await PillService.DeletePillAsync(pillId);
             await LoadPills();
         }
+    }
+
+    private async Task TakePillDose(int pillId, double amountTaken)
+    {
+        var success = await PillService.TakePillDoseAsync(pillId, amountTaken);
+
+        if (success)
+        {
+
+        }
+        else
+        {
+
+        }
+
+        // Refresh the pill list to show updated quantities
+        await LoadPills();
     }
 }

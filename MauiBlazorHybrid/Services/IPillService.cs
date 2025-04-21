@@ -10,4 +10,5 @@ public interface IPillService
     Task<Pill> AddPillAsync(Pill pill);
     Task UpdatePillAsync(Pill pill);
     Task DeletePillAsync(int id);
+    Task<bool> TakePillDoseAsync(int pillId, double amount);
 }

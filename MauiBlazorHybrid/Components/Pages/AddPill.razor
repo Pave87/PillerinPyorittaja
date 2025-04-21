@@ -8,68 +8,178 @@
 <h1>@(Id.HasValue ? "Edit Pill" : "Add a New Pill")</h1>
 
 <form>
-    <label for="pillName">Pill Name:</label>
-    <input id="pillName" type="text" @bind="PillName" />
+    <div class="form-group">
+        <label for="pillName">Pill Name:</label>
+        <input id="pillName" type="text" @bind="PillName" class="form-control" />
+    </div>
+
+    <div class="form-group">
+        <label for="pillQuantity">Quantity Left:</label>
+        <input id="pillQuantity" type="number" @bind="PillQuantity" min="0" step="0.5" class="form-control" />
+    </div>
+
+    <div class="form-group">
+        <label for="amountPerPackage">Pills Per Package:</label>
+        <input id="amountPerPackage" type="number" @bind="AmountPerPackage" min="1" step="1" class="form-control" />
+    </div>
 
     <h3>Dosages</h3>
     @foreach (var (dosage, index) in Dosages.Select((d, i) => (d, i)))
     {
         <div class="dosage-row">
-            <label>Time:</label>
-            <input type="time" 
-                   @bind="dosage.Time"
-                   @bind:event="oninput" />
+            <div class="form-group">
+                <label>Time:</label>
+                <input type="time"
+                       @bind="dosage.Time"
+                       @bind:event="oninput"
+                       class="form-control" />
+            </div>
 
-            <label>Repetition:</label>
-            <input type="number" @bind="dosage.Repetition" style="width: 40px;" />
+            <div class="form-group">
+                <label>Amount Taken:</label>
+                <input type="number" @bind="dosage.AmountTaken" class="form-control" style="width: 100px;" step="0.5" min="0.5" />
+            </div>
 
-            <label>Frequency:</label>
-            <select @bind="dosage.Frequency">
-                <option value="Days">Days</option>
-                <option value="Weeks">Weeks</option>
-            </select>
+            <div class="form-group">
+                <label>Repetition:</label>
+                <input type="number" @bind="dosage.Repetition" class="form-control" style="width: 80px;" min="1" />
+            </div>
+
+            <div class="form-group">
+                <label>Frequency:</label>
+                <select @bind="dosage.Frequency" class="form-control">
+                    <option value="Days">Days</option>
+                    <option value="Weeks">Weeks</option>
+                </select>
+            </div>
 
             @if (dosage.Frequency == "Weeks")
             {
                 <div class="weekday-selection">
                     <label>Select Weekdays:</label>
-                    @foreach (var day in WeekDays)
-                    {
-                        <label class="weekday-checkbox">
-                            <input type="checkbox" 
-                                   checked="@(dosage.SelectedDays?.Contains(day) ?? false)"
-                                   @onchange="@(e => ToggleWeekday(dosage, day, (bool)e.Value))" />
-                            @day
-                        </label>
-                    }
+                    <div class="weekday-checkboxes">
+                        @foreach (var day in WeekDays)
+                        {
+                            <label class="weekday-checkbox">
+                                <input type="checkbox"
+                                       checked="@(dosage.SelectedDays?.Contains(day) ?? false)"
+                                       @onchange="@(e => ToggleWeekday(dosage, day, (bool)e.Value))" />
+                                @day
+                            </label>
+                        }
+                    </div>
                 </div>
             }
 
             @if (index == Dosages.Count - 1)
             {
-                <button type="button" @onclick="AddNewDosageRow">Add Another Dosage</button>
+                <button type="button" class="btn-add-dosage" @onclick="AddNewDosageRow">Add Another Dosage</button>
             }
         </div>
     }
 
     @if (!Dosages.Any())
     {
-        <button type="button" @onclick="AddNewDosageRow">Add Dosage</button>
+        <button type="button" class="btn-add-dosage" @onclick="AddNewDosageRow">Add Dosage</button>
     }
 
-    <button type="button" @onclick="HandleSubmit">@(Id.HasValue ? "Save Changes" : "Add Pill")</button>
-    <button type="button" @onclick="Cancel">Cancel</button>
+    <div class="form-actions">
+        <button type="button" class="btn-submit" @onclick="HandleSubmit">@(Id.HasValue ? "Save Changes" : "Add Pill")</button>
+        <button type="button" class="btn-cancel" @onclick="Cancel">Cancel</button>
+    </div>
 </form>
 
 <style>
+    form {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        max-width: 550px;
+        margin: 0 auto;
+        padding: 1rem;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 1rem;
+    }
+
+    .dosage-row {
+        border: 1px solid #eee;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        background-color: #f9f9f9;
+    }
+
     .weekday-selection {
-        margin: 10px 0;
+        margin-top: 1rem;
     }
+
+    .weekday-checkboxes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
     .weekday-checkbox {
-        margin-right: 10px;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        margin-right: 1rem;
     }
-    .monthday-selection {
-        margin: 10px 0;
+
+    .btn-add-dosage {
+        display: block;
+        padding: 0.5rem 1rem;
+        background-color: #17a2b8;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 1rem 0;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .btn-submit, .btn-cancel {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 500;
+    }
+
+    .btn-submit {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .btn-cancel {
+        background-color: #6c757d;
+        color: white;
+    }
+
+    button:hover {
+        opacity: 0.9;
     }
 </style>
 
@@ -78,6 +188,8 @@
     public int? Id { get; set; }
 
     private string PillName { get; set; } = string.Empty;
+    private double PillQuantity { get; set; } = 0;
+    private double AmountPerPackage { get; set; } = 1;
     private List<PillDosage> Dosages { get; set; } = new();
     private readonly string[] WeekDays = new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
 
@@ -91,15 +203,18 @@
                 if (pill != null)
                 {
                     PillName = pill.Name;
+                    PillQuantity = pill.Quantity;
+                    AmountPerPackage = pill.AmountPerPackage;
                     Dosages = pill.Dosages.Select(d => new PillDosage
-                    {
-                        Id = d.Id,
-                        PillId = d.PillId,
-                        Time = d.Time,
-                        Repetition = d.Repetition,
-                        Frequency = d.Frequency,
-                        SelectedDays = d.SelectedDays
-                    }).ToList();
+                        {
+                            Id = d.Id,
+                            PillId = d.PillId,
+                            Time = d.Time,
+                            Repetition = d.Repetition,
+                            Frequency = d.Frequency,
+                            SelectedDays = d.SelectedDays,
+                            AmountTaken = d.AmountTaken
+                        }).ToList();
                 }
                 else
                 {
@@ -116,11 +231,13 @@
 
     private void AddNewDosageRow()
     {
-        Dosages.Add(new PillDosage { 
-            Frequency = "Days",
-            SelectedDays = new List<string>(),
-                Repetition = 1
-        });
+        Dosages.Add(new PillDosage
+            {
+                Frequency = "Days",
+                SelectedDays = new List<string>(),
+                Repetition = 1,
+                AmountTaken = 1.0
+            });
         StateHasChanged();
     }
 
@@ -154,6 +271,8 @@
                 if (existingPill != null)
                 {
                     existingPill.Name = PillName;
+                    existingPill.Quantity = PillQuantity;
+                    existingPill.AmountPerPackage = AmountPerPackage;
                     existingPill.Dosages = Dosages;
                     await PillService.UpdatePillAsync(existingPill);
                 }
@@ -161,10 +280,12 @@
             else
             {
                 var newPill = new Pill
-                {
-                    Name = PillName,
-                    Dosages = Dosages
-                };
+                    {
+                        Name = PillName,
+                        Quantity = PillQuantity,
+                        AmountPerPackage = AmountPerPackage,
+                        Dosages = Dosages
+                    };
                 await PillService.AddPillAsync(newPill);
             }
 
@@ -181,3 +302,4 @@
         NavigationManager.NavigateTo("/pills");
     }
 }
+

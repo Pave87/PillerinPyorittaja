@@ -97,6 +97,23 @@ public class PillService : IPillService
         await SavePillsAsync();
     }
 
+    public async Task<bool> TakePillDoseAsync(int pillId, double amount)
+    {
+        var pill = _pills.FirstOrDefault(p => p.Id == pillId);
+        if (pill == null) return false;
+
+        // Check if there's enough quantity
+        if (pill.Quantity >= amount)
+        {
+            // Reduce the quantity
+            pill.Quantity -= amount;
+            await SavePillsAsync();
+            return true;
+        }
+
+        return false;
+    }
+
     private async Task ScheduleNotificationsForPill(Pill pill)
     {
         foreach (var dosage in pill.Dosages)
