@@ -1,0 +1,84 @@
+﻿@page "/settings"
+@using MauiBlazorHybrid.Services
+@using MauiBlazorHybrid.Extensions
+@inject ILocalizationService LocalizationService
+@inherits LocalizeComponent
+
+<h1>@L("Settings")</h1>
+
+<div class="settings-container">
+    <div class="setting-card">
+        <h2>@L("Language")</h2>
+        <p>@L("Select_Language")</p>
+
+        <div class="language-selector-container">
+            <select @bind="SelectedCulture" class="language-dropdown">
+                <option value="en-US">English</option>
+                <option value="fi-FI">Suomi</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="setting-info">
+        <p>@L("Language_Change_Info")</p>
+    </div>
+</div>
+
+<style>
+    .settings-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 1rem;
+    }
+
+    .setting-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 1.5rem;
+        background-color: #fff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .setting-card h2 {
+        margin-top: 0;
+        color: #333;
+        font-size: 1.5rem;
+        font-weight: 500;
+    }
+
+    .language-selector-container {
+        margin-top: 1rem;
+    }
+
+    .language-dropdown {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 1rem;
+        background-color: #f9f9f9;
+    }
+
+    .setting-info {
+        color: #666;
+        font-size: 0.9rem;
+        padding: 0.5rem;
+    }
+</style>
+
+@code {
+    private string SelectedCulture
+    {
+        get => LocalizationService.CurrentCulture;
+        set
+        {
+            if (value != LocalizationService.CurrentCulture)
+            {
+                LocalizationService.SetCultureAsync(value);
+            }
+        }
+    }
+}

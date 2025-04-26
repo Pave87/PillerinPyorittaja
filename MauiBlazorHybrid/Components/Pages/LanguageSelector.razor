@@ -1,0 +1,25 @@
+﻿@using MauiBlazorHybrid.Services
+@inject ILocalizationService LocalizationService
+
+<div class="language-selector">
+    <select @bind="SelectedCulture">
+        <option value="en-US">English</option>
+        <option value="es-ES">Español</option>
+        <option value="de-DE">Deutsch</option>
+        @* Add more languages as needed *@
+    </select>
+</div>
+
+@code {
+    private string SelectedCulture
+    {
+        get => LocalizationService.CurrentCulture;
+        set
+        {
+            if (value != LocalizationService.CurrentCulture)
+            {
+                LocalizationService.SetCultureAsync(value);
+            }
+        }
+    }
+}

@@ -26,6 +26,8 @@ namespace MauiBlazorHybrid
             // Register services
             builder.Services.AddSingleton<IPillService, PillService>();
             builder.Services.AddSingleton<MauiBlazorHybrid.Services.INotificationService, NotificationService>();
+            builder.Services.AddSingleton<ILocalizationService, LocalizationService>();
+
 
             return builder.Build();
         }

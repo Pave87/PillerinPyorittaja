@@ -59,44 +59,168 @@ namespace MauiBlazorHybrid.Services
 
         public async Task SchedulePillNotificationAsync(Pill pill, PillDosage dosage)
         {
-            if (dosage.Time == null) return;
+            // Find the most recent history entry for this dosage
+            var lastTaken = pill.History
+                ?.Where(h => h.DosageId == dosage.Id)
+                .OrderByDescending(h => h.Timestamp)
+                .FirstOrDefault();
 
-            var now = DateTime.Now;
-            var notificationTime = new DateTime(
-                now.Year, now.Month, now.Day,
-                dosage.Time.Value.Hour,
-                dosage.Time.Value.Minute,
-                0);
+            // Calculate the next dose time based on last taken timestamp
+            DateTime nextDoseTime = CalculateNextDoseTime(dosage, lastTaken?.Timestamp);
 
-            // If the time has passed today, schedule for tomorrow
-            if (notificationTime < now)
-            {
-                notificationTime = notificationTime.AddDays(1);
-            }
-
-            // Calculate next occurrence based on frequency
-            switch (dosage.Frequency)
-            {
-                case "Days":
-                    await ScheduleNotification(pill, dosage, notificationTime, dosage.Repetition);
-                    break;
-
-                case "Weeks":
-                    if (dosage.SelectedDays?.Any() == true)
-                    {
-                        foreach (var day in dosage.SelectedDays)
-                        {
-                            var dayOfWeek = ParseWeekDay(day);
-                            var nextOccurrence = GetNextWeekdayOccurrence(notificationTime, dayOfWeek);
-                            await ScheduleNotification(pill, dosage, nextOccurrence, 7);
-                        }
-                    }
-                    break;
-            }
+            // Schedule notification for the next dose
+            await ScheduleNotification(pill, dosage, nextDoseTime, 0); // No auto-repeat, we'll manually schedule
 
             // Show a confirmation toast
-            var toast = Toast.Make($"Reminder scheduled for {pill.Name} at {notificationTime.ToShortTimeString()}", ToastDuration.Short);
+            var toast = Toast.Make($"Reminder scheduled for {pill.Name} at {nextDoseTime:g}", ToastDuration.Short);
             await toast.Show();
+        }
+
+        public async Task SchedulePillNotificationAsync(Pill pill, PillDosage dosage, DateTime nextDoseTime)
+        {
+            await ScheduleNotification(pill, dosage, nextDoseTime, 0); // No auto-repeat, we'll manually schedule
+        }
+
+        private DateTime CalculateNextDoseTime(PillDosage dosage, DateTime? lastTakenTime)
+        {
+            // Current time to base calculations on
+            DateTime now = DateTime.Now;
+
+            // If there's no time set in the dosage, default to current time
+            TimeOnly dosageTimeOfDay = dosage.Time ?? TimeOnly.FromDateTime(now);
+
+            // Start with today's date at the dosage time
+            DateTime baseTime = new DateTime(
+                now.Year,
+                now.Month,
+                now.Day,
+                dosageTimeOfDay.Hour,
+                dosageTimeOfDay.Minute,
+                0);
+
+            // If we've never taken this pill before or no dosage ID was recorded
+            if (lastTakenTime == null)
+            {
+                // If today's dose time is already past, schedule for next occurrence
+                if (baseTime < now)
+                {
+                    if (dosage.Frequency == "Days")
+                    {
+                        // For daily dosage, schedule for tomorrow
+                        return baseTime.AddDays(1);
+                    }
+                    else if (dosage.Frequency == "Weeks" && dosage.SelectedDays?.Any() == true)
+                    {
+                        // For weekly dosage, find the next selected day
+                        return FindNextWeekdayOccurrence(baseTime, dosage.SelectedDays);
+                    }
+                }
+                return baseTime;
+            }
+            else
+            {
+                // We have a record of when this pill was last taken
+                DateTime lastTaken = lastTakenTime.Value;
+
+                // Calculate the next dose based on frequency and repetition
+                if (dosage.Frequency == "Days")
+                {
+                    // Calculate next dose based on repetition (e.g., every X days)
+                    DateTime nextDose = lastTaken.Date.AddDays(dosage.Repetition);
+
+                    // Set the time part from the dosage's scheduled time
+                    nextDose = new DateTime(
+                        nextDose.Year,
+                        nextDose.Month,
+                        nextDose.Day,
+                        dosageTimeOfDay.Hour,
+                        dosageTimeOfDay.Minute,
+                        0);
+
+                    // If the calculated time is in the past, schedule for the next cycle
+                    if (nextDose < now)
+                    {
+                        int daysToAdd = dosage.Repetition - (int)(now - nextDose).TotalDays % dosage.Repetition;
+                        if (daysToAdd == 0 || (now - nextDose).TotalDays % dosage.Repetition == 0)
+                        {
+                            daysToAdd = dosage.Repetition;
+                        }
+                        nextDose = now.Date.AddDays(daysToAdd);
+
+                        // Reset time component
+                        nextDose = new DateTime(
+                            nextDose.Year,
+                            nextDose.Month,
+                            nextDose.Day,
+                            dosageTimeOfDay.Hour,
+                            dosageTimeOfDay.Minute,
+                            0);
+                    }
+
+                    return nextDose;
+                }
+                else if (dosage.Frequency == "Weeks" && dosage.SelectedDays?.Any() == true)
+                {
+                    // For weekly dosage, find the next selected day after the last taken date
+                    DateTime startPoint = lastTaken.AddDays(1);
+                    DateTime nextWeeklyDose = FindNextWeekdayOccurrence(startPoint, dosage.SelectedDays);
+
+                    // Apply repetition (every X weeks)
+                    int weeksToAdd = (dosage.Repetition - 1) * 7;
+                    nextWeeklyDose = nextWeeklyDose.AddDays(weeksToAdd);
+
+                    // If the calculated time is in the past, find the next occurrence
+                    if (nextWeeklyDose < now)
+                    {
+                        nextWeeklyDose = FindNextWeekdayOccurrence(now, dosage.SelectedDays);
+                    }
+
+                    // Set the time part from the dosage's scheduled time
+                    nextWeeklyDose = new DateTime(
+                        nextWeeklyDose.Year,
+                        nextWeeklyDose.Month,
+                        nextWeeklyDose.Day,
+                        dosageTimeOfDay.Hour,
+                        dosageTimeOfDay.Minute,
+                        0);
+
+                    return nextWeeklyDose;
+                }
+
+                // Default case, schedule for tomorrow at the dosage time
+                return baseTime.AddDays(1);
+            }
+        }
+
+        private DateTime FindNextWeekdayOccurrence(DateTime startDate, List<string> selectedDays)
+        {
+            DateTime result = startDate;
+            int daysToAdd = 0;
+            bool found = false;
+
+            // Convert the day names to DayOfWeek enum values for easier comparison
+            var selectedDaysOfWeek = selectedDays.Select(day => ParseWeekDay(day)).ToList();
+
+            // Try each day, up to 7 days forward
+            for (int i = 0; i < 7; i++)
+            {
+                DateTime checkDate = startDate.AddDays(i);
+                if (selectedDaysOfWeek.Contains(checkDate.DayOfWeek))
+                {
+                    daysToAdd = i;
+                    found = true;
+                    break;
+                }
+            }
+
+            // If no selected day found in the next 7 days (shouldn't happen with valid data)
+            // then just add a week
+            if (!found)
+            {
+                daysToAdd = 7;
+            }
+
+            return startDate.AddDays(daysToAdd);
         }
 
         private async Task ScheduleNotification(Pill pill, PillDosage dosage, DateTime scheduleTime, int repeatDays)
@@ -116,7 +240,7 @@ namespace MauiBlazorHybrid.Services
                     NotificationId = notificationId,
                     ScheduleTime = scheduleTime,
                     Title = $"Time to take {pill.Name}",
-                    Message = $"Take {dosage.AmountTaken} {(dosage.AmountTaken == 1 ? "pill" : "pills")} of {pill.Name}",
+                    Message = $"Take {dosage.AmountTaken} {(dosage.AmountTaken == 1 ? pill.Unit : $"{pill.Unit}s")} of {pill.Name}",
                     RepeatDays = repeatDays,
                     PillId = pill.Id,
                     DosageId = dosage.Id

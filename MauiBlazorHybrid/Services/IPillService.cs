@@ -11,4 +11,8 @@ public interface IPillService
     Task UpdatePillAsync(Pill pill);
     Task DeletePillAsync(int id);
     Task<bool> TakePillDoseAsync(int pillId, double amount);
+    Task<bool> TakePillDoseAsync(int pillId, double amount, int? dosageId);
+    Task<List<PillHistory>> GetPillHistoryAsync(int pillId);
+    Task<List<PillHistory>> GetAllPillHistoryAsync();
+    Task AddPillHistoryManuallyAsync(PillHistory history);
 }

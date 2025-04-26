@@ -2,33 +2,40 @@
 @page "/addpill/{Id:int?}"
 @using MauiBlazorHybrid.Models
 @using MauiBlazorHybrid.Services
+@using MauiBlazorHybrid.Extensions
 @inject IPillService PillService
 @inject NavigationManager NavigationManager
+@inherits LocalizeComponent
 
-<h1>@(Id.HasValue ? "Edit Pill" : "Add a New Pill")</h1>
+<h1>@L(Id.HasValue ? "EditPill" : "AddNewPill")</h1>
 
 <form>
     <div class="form-group">
-        <label for="pillName">Pill Name:</label>
+        <label for="pillName">@L("PillName"):</label>
         <input id="pillName" type="text" @bind="PillName" class="form-control" />
     </div>
 
     <div class="form-group">
-        <label for="pillQuantity">Quantity Left:</label>
+        <label for="pillQuantity">@L("QuantityLeft"):</label>
         <input id="pillQuantity" type="number" @bind="PillQuantity" min="0" step="0.5" class="form-control" />
     </div>
 
     <div class="form-group">
-        <label for="amountPerPackage">Pills Per Package:</label>
+        <label for="Unit">@L("Unit"):</label>
+        <input id="Unit" type="text" @bind="Unit" class="form-control" />
+    </div>
+
+    <div class="form-group">
+        <label for="amountPerPackage">@L("PillsPerPackage"):</label>
         <input id="amountPerPackage" type="number" @bind="AmountPerPackage" min="1" step="1" class="form-control" />
     </div>
 
-    <h3>Dosages</h3>
+    <h3>@L("Dosages")</h3>
     @foreach (var (dosage, index) in Dosages.Select((d, i) => (d, i)))
     {
         <div class="dosage-row">
             <div class="form-group">
-                <label>Time:</label>
+                <label>@L("Time"):</label>
                 <input type="time"
                        @bind="dosage.Time"
                        @bind:event="oninput"
@@ -36,27 +43,27 @@
             </div>
 
             <div class="form-group">
-                <label>Amount Taken:</label>
+                <label>@L("AmountTaken"):</label>
                 <input type="number" @bind="dosage.AmountTaken" class="form-control" style="width: 100px;" step="0.5" min="0.5" />
             </div>
 
             <div class="form-group">
-                <label>Repetition:</label>
+                <label>@L("Repetition"):</label>
                 <input type="number" @bind="dosage.Repetition" class="form-control" style="width: 80px;" min="1" />
             </div>
 
             <div class="form-group">
-                <label>Frequency:</label>
+                <label>@L("Frequency"):</label>
                 <select @bind="dosage.Frequency" class="form-control">
-                    <option value="Days">Days</option>
-                    <option value="Weeks">Weeks</option>
+                    <option value="Days">@L("Days")</option>
+                    <option value="Weeks">@L("Weeks")</option>
                 </select>
             </div>
 
             @if (dosage.Frequency == "Weeks")
             {
                 <div class="weekday-selection">
-                    <label>Select Weekdays:</label>
+                    <label>@L("SelectWeekdays"):</label>
                     <div class="weekday-checkboxes">
                         @foreach (var day in WeekDays)
                         {
@@ -64,7 +71,7 @@
                                 <input type="checkbox"
                                        checked="@(dosage.SelectedDays?.Contains(day) ?? false)"
                                        @onchange="@(e => ToggleWeekday(dosage, day, (bool)e.Value))" />
-                                @day
+                                @L(day)
                             </label>
                         }
                     </div>
@@ -73,19 +80,19 @@
 
             @if (index == Dosages.Count - 1)
             {
-                <button type="button" class="btn-add-dosage" @onclick="AddNewDosageRow">Add Another Dosage</button>
+                <button type="button" class="btn-add-dosage" @onclick="AddNewDosageRow">@L("AddAnotherDosage")</button>
             }
         </div>
     }
 
     @if (!Dosages.Any())
     {
-        <button type="button" class="btn-add-dosage" @onclick="AddNewDosageRow">Add Dosage</button>
+        <button type="button" class="btn-add-dosage" @onclick="AddNewDosageRow">@L("AddDosage")</button>
     }
 
     <div class="form-actions">
-        <button type="button" class="btn-submit" @onclick="HandleSubmit">@(Id.HasValue ? "Save Changes" : "Add Pill")</button>
-        <button type="button" class="btn-cancel" @onclick="Cancel">Cancel</button>
+        <button type="button" class="btn-submit" @onclick="HandleSubmit">@L(Id.HasValue ? "SaveChanges" : "AddPill")</button>
+        <button type="button" class="btn-cancel" @onclick="Cancel">@L("Cancel")</button>
     </div>
 </form>
 
@@ -190,8 +197,10 @@
     private string PillName { get; set; } = string.Empty;
     private double PillQuantity { get; set; } = 0;
     private double AmountPerPackage { get; set; } = 1;
+    private string Unit { get; set; } = string.Empty;
     private List<PillDosage> Dosages { get; set; } = new();
     private readonly string[] WeekDays = new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
+    private int _nextDosageId = 1; // Track next dosage ID
 
     protected override async Task OnInitializedAsync()
     {
@@ -205,6 +214,7 @@
                     PillName = pill.Name;
                     PillQuantity = pill.Quantity;
                     AmountPerPackage = pill.AmountPerPackage;
+                    Unit = pill.Unit;
                     Dosages = pill.Dosages.Select(d => new PillDosage
                         {
                             Id = d.Id,
@@ -215,6 +225,9 @@
                             SelectedDays = d.SelectedDays,
                             AmountTaken = d.AmountTaken
                         }).ToList();
+
+                    // Set the next dosage ID based on existing dosages
+                    _nextDosageId = Dosages.Any() ? Dosages.Max(d => d.Id) + 1 : 1;
                 }
                 else
                 {
@@ -233,6 +246,8 @@
     {
         Dosages.Add(new PillDosage
             {
+                Id = _nextDosageId++, // Assign incremental ID
+                PillId = Id ?? 0, // Set PillId if we're editing an existing pill
                 Frequency = "Days",
                 SelectedDays = new List<string>(),
                 Repetition = 1,
@@ -273,6 +288,14 @@
                     existingPill.Name = PillName;
                     existingPill.Quantity = PillQuantity;
                     existingPill.AmountPerPackage = AmountPerPackage;
+                    existingPill.Unit = Unit;
+
+                    // Ensure all dosages have the correct PillId
+                    foreach (var dosage in Dosages)
+                    {
+                        dosage.PillId = existingPill.Id;
+                    }
+
                     existingPill.Dosages = Dosages;
                     await PillService.UpdatePillAsync(existingPill);
                 }
@@ -284,9 +307,22 @@
                         Name = PillName,
                         Quantity = PillQuantity,
                         AmountPerPackage = AmountPerPackage,
-                        Dosages = Dosages
+                        Unit = Unit,
+                        Dosages = new List<PillDosage>() // Initialize with empty list
                     };
-                await PillService.AddPillAsync(newPill);
+
+                // Add the pill first to get its ID
+                var savedPill = await PillService.AddPillAsync(newPill);
+
+                // Update dosage IDs and PillId
+                foreach (var dosage in Dosages)
+                {
+                    dosage.PillId = savedPill.Id;
+                }
+
+                // Update the pill with dosages
+                savedPill.Dosages = Dosages;
+                await PillService.UpdatePillAsync(savedPill);
             }
 
             NavigationManager.NavigateTo("/pills");
@@ -302,4 +338,3 @@
         NavigationManager.NavigateTo("/pills");
     }
 }
-

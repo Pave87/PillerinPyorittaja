@@ -1,0 +1,705 @@
+﻿@page "/"
+@using MauiBlazorHybrid.Models
+@using MauiBlazorHybrid.Services
+@using Microsoft.JSInterop
+@inject IPillService PillService
+@inject INotificationService NotificationService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+@inherits MauiBlazorHybrid.Extensions.LocalizeComponent
+
+@if (!_permissionGranted)
+{
+            <div class="alert alert-warning">
+                <p>@L("Notifications_Not_Enabled")</p>
+                <button class="permission-button" @onclick="RequestNotificationPermission">@L("Enable_Notifications")</button>
+            </div>
+}
+
+@if (pills == null)
+{
+            <p>@L("Loading")</p>
+}
+else if (!pills.Any())
+{
+            <p>@L("No_Pills_Added")</p>
+            <button class="add-pill-button" @onclick="NavigateToAddPill">@L("Add_New_Pill")</button>
+}
+else
+{
+    @if (missedDoses.Any())
+    {
+                        <div class="missed-doses">
+                            <h2>@L("Missed_Doses")</h2>
+                            <div class="missed-doses-list">
+                @foreach (var dose in missedDoses.OrderBy(d => d.ScheduledTime).Take(5))
+                {
+                                            <div class="missed-dose-item">
+                                                <div class="dose-info">
+                                                    <span class="pill-name">@dose.PillName</span>
+                                                    <span class="dose-detail">@dose.AmountTaken @dose.Unit</span>
+                                                </div>
+                                                <div class="dose-time">
+                                                    <span class="missed-text">@FormatMissedDoseTime(dose.ScheduledTime)</span>
+                                                </div>
+                                                <div class="dose-actions">
+                                                    <button class="take-pill-button" @onclick="() => TakePillDoseFromDosage(dose.PillId, dose.DosageId, dose.AmountTaken)">@L("Take_Now")</button>
+                                                    <button class="skip-pill-button" @onclick="() => SkipMissedDose(dose)">@L("Skip")</button>
+                                                </div>
+                                            </div>
+                }
+                            </div>
+                        </div>
+    }
+
+            <div class="upcoming-doses">
+                <h2>@L("Upcoming_Doses")</h2>
+        @if (upcomingDoses.Any())
+        {
+                            <div class="upcoming-doses-list">
+                @foreach (var dose in upcomingDoses.OrderBy(d => d.NextDoseTime).Take(5))
+                {
+                                            <div class="upcoming-dose-item @(IsRecentlyDue(dose.NextDoseTime) ? "recent-due" : "")">
+                                                <div class="dose-info">
+                                                    <span class="pill-name">@dose.PillName</span>
+                                                    <span class="dose-detail">@dose.AmountTaken @dose.Unit</span>
+                                                </div>
+                                                <div class="dose-time">
+                            @if (IsRecentlyDue(dose.NextDoseTime))
+                            {
+                                                                <span class="due-text">@L("Due_Now")</span>
+                            }
+                            else
+                            {
+                                                                <span>@FormatNextDoseTime(dose.NextDoseTime)</span>
+                            }
+                                                </div>
+                                                <button class="take-pill-button" @onclick="() => TakePillDoseFromDosage(dose.PillId, dose.DosageId, dose.AmountTaken)">@L("Take_Dose")</button>
+                                            </div>
+                }
+                            </div>
+        }
+        else
+        {
+                            <p>@L("No_Upcoming_Doses")</p>
+        }
+            </div>
+}
+
+<style>
+    .upcoming-doses, .missed-doses {
+        margin-bottom: 2rem;
+    }
+
+    .upcoming-doses-list, .missed-doses-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .upcoming-dose-item, .missed-dose-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #17a2b8;
+    }
+
+    .upcoming-dose-item {
+        border-left: 4px solid #17a2b8;
+    }
+
+    .missed-dose-item {
+        border-left: 4px solid #dc3545;
+        background-color: #f8d7da;
+    }
+
+    .recent-due {
+        background-color: #fff3cd;
+        border-left: 4px solid #ffc107;
+    }
+
+    .dose-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .pill-name {
+        font-weight: bold;
+        font-size: 1.1rem;
+    }
+
+    .dose-detail {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+
+    .dose-time {
+        font-weight: 500;
+    }
+
+    .due-text {
+        color: #dc3545;
+        font-weight: bold;
+    }
+
+    .missed-text {
+        color: #721c24;
+        font-weight: bold;
+    }
+
+    .dose-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .add-pill-button {
+        padding: 0.75rem 1.5rem;
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-bottom: 1rem;
+        font-weight: 500;
+    }
+
+    .alert {
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 4px;
+        background-color: #fff3cd;
+        border: 1px solid #ffecb5;
+        color: #664d03;
+    }
+
+    .permission-button {
+        padding: 0.5rem 1rem;
+        background-color: #0d6efd;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-top: 0.5rem;
+    }
+
+    .take-pill-button {
+        padding: 0.5rem 0.75rem;
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 500;
+        margin-left: 0.5rem;
+    }
+
+    .skip-pill-button {
+        padding: 0.5rem 0.75rem;
+        background-color: #6c757d;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 500;
+    }
+
+    button:hover {
+        opacity: 0.9;
+    }
+</style>
+
+@code {
+    private List<Pill>? pills;
+    private bool _permissionGranted;
+    private List<UpcomingDose> upcomingDoses = new();
+    private List<MissedDose> missedDoses = new();
+
+    // Class to store information about upcoming doses
+    private class UpcomingDose
+    {
+        public int PillId { get; set; }
+        public string PillName { get; set; } = string.Empty;
+        public int DosageId { get; set; }
+        public double AmountTaken { get; set; }
+        public string Unit { get; set; } = string.Empty;
+        public DateTime NextDoseTime { get; set; }
+    }
+
+    // Class to store information about missed doses
+    private class MissedDose
+    {
+        public int PillId { get; set; }
+        public string PillName { get; set; } = string.Empty;
+        public int DosageId { get; set; }
+        public double AmountTaken { get; set; }
+        public string Unit { get; set; } = string.Empty;
+        public DateTime ScheduledTime { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckNotificationPermission();
+        await LoadPills();
+        await CalculateUpcomingDoses();
+        await CalculateMissedDoses();
+    }
+
+    private async Task LoadPills()
+    {
+        pills = await PillService.GetPillsAsync();
+    }
+
+    private async Task CalculateUpcomingDoses()
+    {
+        upcomingDoses.Clear();
+
+        if (pills == null) return;
+
+        foreach (var pill in pills)
+        {
+            DateTime? earliestDoseTime = null;
+            PillDosage? earliestDosage = null;
+
+            // Find the earliest upcoming dose for this pill
+            foreach (var dosage in pill.Dosages)
+            {
+                var nextDoseTime = GetNextDoseTime(pill, dosage);
+                if (nextDoseTime.HasValue)
+                {
+                    if (earliestDoseTime == null || nextDoseTime.Value < earliestDoseTime.Value)
+                    {
+                        earliestDoseTime = nextDoseTime.Value;
+                        earliestDosage = dosage;
+                    }
+                }
+            }
+
+            // Add only the earliest dose for this pill
+            if (earliestDoseTime.HasValue && earliestDosage != null)
+            {
+                upcomingDoses.Add(new UpcomingDose
+                    {
+                        PillId = pill.Id,
+                        PillName = pill.Name,
+                        DosageId = earliestDosage.Id,
+                        AmountTaken = earliestDosage.AmountTaken,
+                        Unit = pill.Unit,
+                        NextDoseTime = earliestDoseTime.Value
+                    });
+            }
+        }
+    }
+
+    private async Task CalculateMissedDoses()
+    {
+        missedDoses.Clear();
+
+        if (pills == null) return;
+
+        DateTime now = DateTime.Now;
+
+        foreach (var pill in pills)
+        {
+            foreach (var dosage in pill.Dosages)
+            {
+                // Find when this dosage was last taken
+                var lastTaken = pill.History
+                    .Where(h => h.DosageId == dosage.Id)
+                    .OrderByDescending(h => h.Timestamp)
+                    .FirstOrDefault();
+
+                DateTime lastTakenDate = lastTaken?.Timestamp ?? DateTime.MinValue;
+
+                // Find all missed doses since last taken
+                List<DateTime> missedDoseTimes = new();
+
+                // Calculate based on frequency
+                if (dosage.Frequency == "Days")
+                {
+                    // For daily dosages: check every 'repetition' days from the last taken date
+                    DateTime checkDate = lastTaken == null ? DateTime.Now.Date.AddDays(-30) : lastTaken.Timestamp.Date;
+
+                    while (checkDate < now.Date)
+                    {
+                        checkDate = checkDate.AddDays(dosage.Repetition);
+
+                        if (checkDate >= now.Date) break;
+
+                        // Create a datetime with the scheduled time on this date
+                        if (dosage.Time.HasValue)
+                        {
+                            DateTime scheduledDateTime = new DateTime(
+                                checkDate.Year,
+                                checkDate.Month,
+                                checkDate.Day,
+                                dosage.Time.Value.Hour,
+                                dosage.Time.Value.Minute,
+                                0
+                            );
+
+                            // If this scheduled time is in the past but not taken, it's missed
+                            if (scheduledDateTime < now && !IsDosageTaken(pill, dosage.Id, scheduledDateTime))
+                            {
+                                missedDoseTimes.Add(scheduledDateTime);
+                            }
+                        }
+                    }
+                }
+                else if (dosage.Frequency == "Weeks" && dosage.SelectedDays?.Any() == true)
+                {
+                    // For weekly dosages: check each selected day since last taken
+                    DateTime checkDate = lastTaken == null ? DateTime.Now.Date.AddDays(-60) : lastTaken.Timestamp.Date;
+
+                    // Loop through dates
+                    for (DateTime date = checkDate; date < now.Date; date = date.AddDays(1))
+                    {
+                        // Check if this is a selected day of the week
+                        string dayCode = date.DayOfWeek switch
+                        {
+                            DayOfWeek.Monday => "Mon",
+                            DayOfWeek.Tuesday => "Tue",
+                            DayOfWeek.Wednesday => "Wed",
+                            DayOfWeek.Thursday => "Thu",
+                            DayOfWeek.Friday => "Fri",
+                            DayOfWeek.Saturday => "Sat",
+                            DayOfWeek.Sunday => "Sun",
+                            _ => ""
+                        };
+
+                        if (dosage.SelectedDays.Contains(dayCode))
+                        {
+                            // Also check for repetition pattern (e.g., every 2 weeks)
+                            // Calculate the week number since the epoch
+                            int weekNumber = (int)Math.Floor((date - DateTime.MinValue).TotalDays / 7);
+
+                            // Check if this week matches the repetition pattern
+                            if (weekNumber % dosage.Repetition == 0)
+                            {
+                                // Create a datetime with the scheduled time on this date
+                                if (dosage.Time.HasValue)
+                                {
+                                    DateTime scheduledDateTime = new DateTime(
+                                        date.Year,
+                                        date.Month,
+                                        date.Day,
+                                        dosage.Time.Value.Hour,
+                                        dosage.Time.Value.Minute,
+                                        0
+                                    );
+
+                                    // If this scheduled time is in the past but not taken, it's missed
+                                    if (scheduledDateTime < now && !IsDosageTaken(pill, dosage.Id, scheduledDateTime))
+                                    {
+                                        missedDoseTimes.Add(scheduledDateTime);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Add missed doses to the list (limit to recent misses to avoid overwhelming the UI)
+                foreach (var missedTime in missedDoseTimes.OrderByDescending(t => t).Take(3))
+                {
+                    missedDoses.Add(new MissedDose
+                        {
+                            PillId = pill.Id,
+                            PillName = pill.Name,
+                            DosageId = dosage.Id,
+                            AmountTaken = dosage.AmountTaken,
+                            Unit = pill.Unit,
+                            ScheduledTime = missedTime
+                        });
+                }
+            }
+        }
+
+        // Take the most recent missed doses
+        missedDoses = missedDoses.OrderByDescending(d => d.ScheduledTime).Take(10).ToList();
+    }
+
+    private bool IsDosageTaken(Pill pill, int dosageId, DateTime scheduledTime)
+    {
+        // Check if there's a history entry for this dosage within a reasonable time window (+/- 2 hours)
+        var startWindow = scheduledTime.AddHours(-2);
+        var endWindow = scheduledTime.AddHours(2);
+
+        return pill.History.Any(h =>
+            h.DosageId == dosageId &&
+            h.Timestamp >= startWindow &&
+            h.Timestamp <= endWindow);
+    }
+
+    private DateTime? GetNextDoseTime(Pill pill, PillDosage dosage)
+    {
+        // Find when this dosage was last taken
+        var lastTaken = pill.History
+            .Where(h => h.DosageId == dosage.Id)
+            .OrderByDescending(h => h.Timestamp)
+            .FirstOrDefault();
+
+        return CalculateNextDoseTime(dosage, lastTaken?.Timestamp);
+    }
+
+    private DateTime? CalculateNextDoseTime(PillDosage dosage, DateTime? lastTakenTime)
+    {
+        if (dosage.Time == null) return null;
+
+        // Current time to base calculations on
+        DateTime now = DateTime.Now;
+
+        // Start with today's date at the dosage time
+        DateTime baseTime = new DateTime(
+            now.Year,
+            now.Month,
+            now.Day,
+            dosage.Time.Value.Hour,
+            dosage.Time.Value.Minute,
+            0);
+
+        // If we've never taken this pill before
+        if (lastTakenTime == null)
+        {
+            // If today's dose time is already past, schedule for next occurrence
+            if (baseTime < now)
+            {
+                if (dosage.Frequency == "Days")
+                {
+                    // For daily dosage, schedule for tomorrow
+                    return baseTime.AddDays(1);
+                }
+                else if (dosage.Frequency == "Weeks" && dosage.SelectedDays?.Any() == true)
+                {
+                    // For weekly dosage, find the next selected day
+                    return FindNextWeekdayOccurrence(baseTime, dosage.SelectedDays);
+                }
+            }
+            return baseTime;
+        }
+        else
+        {
+            // We have a record of when this pill was last taken
+            DateTime lastTaken = lastTakenTime.Value;
+
+            // Calculate the next dose based on frequency and repetition
+            if (dosage.Frequency == "Days")
+            {
+                // Calculate next dose based on repetition (e.g., every X days)
+                DateTime nextDose = lastTaken.Date.AddDays(dosage.Repetition);
+
+                // Set the time part from the dosage's scheduled time
+                nextDose = new DateTime(
+                    nextDose.Year,
+                    nextDose.Month,
+                    nextDose.Day,
+                    dosage.Time.Value.Hour,
+                    dosage.Time.Value.Minute,
+                    0);
+
+                // If the calculated time is in the past, schedule for the next cycle
+                if (nextDose < now)
+                {
+                    int daysToAdd = dosage.Repetition - (int)(now - nextDose).TotalDays % dosage.Repetition;
+                    if (daysToAdd == 0 || (now - nextDose).TotalDays % dosage.Repetition == 0)
+                    {
+                        daysToAdd = dosage.Repetition;
+                    }
+                    nextDose = now.Date.AddDays(daysToAdd);
+
+                    // Reset time component
+                    nextDose = new DateTime(
+                        nextDose.Year,
+                        nextDose.Month,
+                        nextDose.Day,
+                        dosage.Time.Value.Hour,
+                        dosage.Time.Value.Minute,
+                        0);
+                }
+
+                return nextDose;
+            }
+            else if (dosage.Frequency == "Weeks" && dosage.SelectedDays?.Any() == true)
+            {
+                // For weekly dosage, find the next selected day after the last taken date
+                DateTime startPoint = lastTaken.AddDays(1);
+                DateTime nextWeeklyDose = FindNextWeekdayOccurrence(startPoint, dosage.SelectedDays);
+
+                // Apply repetition (every X weeks)
+                int weeksToAdd = (dosage.Repetition - 1) * 7;
+                nextWeeklyDose = nextWeeklyDose.AddDays(weeksToAdd);
+
+                // If the calculated time is in the past, find the next occurrence
+                if (nextWeeklyDose < now)
+                {
+                    nextWeeklyDose = FindNextWeekdayOccurrence(now, dosage.SelectedDays);
+                }
+
+                // Set the time part from the dosage's scheduled time
+                nextWeeklyDose = new DateTime(
+                    nextWeeklyDose.Year,
+                    nextWeeklyDose.Month,
+                    nextWeeklyDose.Day,
+                    dosage.Time.Value.Hour,
+                    dosage.Time.Value.Minute,
+                    0);
+
+                return nextWeeklyDose;
+            }
+
+            // Default case, schedule for tomorrow at the dosage time
+            return baseTime.AddDays(1);
+        }
+    }
+
+    private DateTime FindNextWeekdayOccurrence(DateTime startDate, List<string> selectedDays)
+    {
+        DateTime result = startDate;
+        int daysToAdd = 0;
+        bool found = false;
+
+        // Convert the day names to DayOfWeek enum values for easier comparison
+        var selectedDaysOfWeek = selectedDays.Select(day => ParseDayOfWeek(day)).ToList();
+
+        // Try each day, up to 7 days forward
+        for (int i = 0; i < 7; i++)
+        {
+            DateTime checkDate = startDate.AddDays(i);
+            if (selectedDaysOfWeek.Contains(checkDate.DayOfWeek))
+            {
+                daysToAdd = i;
+                found = true;
+                break;
+            }
+        }
+
+        // If no selected day found in the next 7 days (shouldn't happen with valid data)
+        // then just add a week
+        if (!found)
+        {
+            daysToAdd = 7;
+        }
+
+        return startDate.AddDays(daysToAdd);
+    }
+
+    private DayOfWeek ParseDayOfWeek(string day)
+    {
+        return day switch
+        {
+            "Mon" => DayOfWeek.Monday,
+            "Tue" => DayOfWeek.Tuesday,
+            "Wed" => DayOfWeek.Wednesday,
+            "Thu" => DayOfWeek.Thursday,
+            "Fri" => DayOfWeek.Friday,
+            "Sat" => DayOfWeek.Saturday,
+            "Sun" => DayOfWeek.Sunday,
+            _ => DayOfWeek.Monday // Default case
+        };
+    }
+
+    private bool IsRecentlyDue(DateTime doseTime)
+    {
+        // Consider a dose "recently due" if it's scheduled for the past hour
+        TimeSpan timeDiff = DateTime.Now - doseTime;
+        return timeDiff > TimeSpan.Zero && timeDiff < TimeSpan.FromHours(1);
+    }
+
+    private string FormatNextDoseTime(DateTime nextDose)
+    {
+        DateTime now = DateTime.Now;
+
+        // If it's today
+        if (nextDose.Date == now.Date)
+        {
+            return $"{L("Today")} {nextDose.ToString("HH:mm")}";
+        }
+        // If it's tomorrow
+        else if (nextDose.Date == now.Date.AddDays(1))
+        {
+            return $"{L("Tomorrow")} {nextDose.ToString("HH:mm")}";
+        }
+        // If it's within the next week
+        else if ((nextDose.Date - now.Date).TotalDays < 7)
+        {
+            return $"{nextDose.ToString("dddd")} {nextDose.ToString("HH:mm")}";
+        }
+        // Otherwise show the full date
+        else
+        {
+            return nextDose.ToString("d MMM") + " " + nextDose.ToString("HH:mm");
+        }
+    }
+
+    private string FormatMissedDoseTime(DateTime missedTime)
+    {
+        DateTime now = DateTime.Now;
+        TimeSpan timeSince = now - missedTime;
+
+        if (timeSince.TotalDays < 1)
+        {
+            // Less than a day ago - show hours
+            int hours = (int)timeSince.TotalHours;
+            return $"{hours} {(hours == 1 ? L("Hour_Ago") : L("Hours_Ago"))}";
+        }
+        else if (timeSince.TotalDays < 7)
+        {
+            // Less than a week ago - show days
+            int days = (int)timeSince.TotalDays;
+            return $"{days} {(days == 1 ? L("Day_Ago") : L("Days_Ago"))}";
+        }
+        else
+        {
+            // More than a week ago - show date
+            return missedTime.ToString("d MMM");
+        }
+    }
+
+    private async Task CheckNotificationPermission()
+    {
+        _permissionGranted = await NotificationService.RequestPermissionAsync();
+        StateHasChanged();
+    }
+
+    private async Task RequestNotificationPermission()
+    {
+        _permissionGranted = await NotificationService.RequestPermissionAsync();
+        StateHasChanged();
+    }
+
+    private void NavigateToAddPill()
+    {
+        NavigationManager.NavigateTo("/addpill");
+    }
+
+    private async Task TakePillDoseFromDosage(int pillId, int dosageId, double amountTaken)
+    {
+        var success = await PillService.TakePillDoseAsync(pillId, amountTaken, dosageId);
+
+        // Refresh the pill list to show updated quantities
+        await LoadPills();
+        await CalculateUpcomingDoses();
+        await CalculateMissedDoses();
+    }
+
+    private async Task SkipMissedDose(MissedDose missedDose)
+    {
+        // Record a skipped dose by creating a history entry with amount taken as 0
+        var skipHistory = new PillHistory
+            {
+                PillId = missedDose.PillId,
+                DosageId = missedDose.DosageId,
+                Timestamp = missedDose.ScheduledTime,
+                AmountTaken = 0 // 0 indicates a skipped dose
+            };
+
+        await PillService.AddPillHistoryManuallyAsync(skipHistory);
+
+        // Recalculate doses
+        await LoadPills();
+        await CalculateUpcomingDoses();
+        await CalculateMissedDoses();
+    }
+}

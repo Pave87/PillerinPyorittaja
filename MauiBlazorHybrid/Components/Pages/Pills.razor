@@ -1,5 +1,4 @@
 ﻿@page "/pills"
-@page "/"
 @using MauiBlazorHybrid.Models
 @using MauiBlazorHybrid.Services
 @using Microsoft.JSInterop
@@ -7,26 +6,27 @@
 @inject INotificationService NotificationService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JS
+@inherits MauiBlazorHybrid.Extensions.LocalizeComponent
 
-<h1>Your Pills</h1>
+<h1>@L("Main_Tittle")</h1>
 
-<button class="add-pill-button" @onclick="NavigateToAddPill">Add New Pill</button>
+<button class="add-pill-button" @onclick="NavigateToAddPill">@L("Add_New_Pill")</button>
 
 @if (!_permissionGranted)
 {
     <div class="alert alert-warning">
-        <p>Notifications are not enabled. Some features may not work properly.</p>
-        <button class="permission-button" @onclick="RequestNotificationPermission">Enable Notifications</button>
+        <p>@L("Notifications_Not_Enabled")</p>
+        <button class="permission-button" @onclick="RequestNotificationPermission">@L("Enable_Notifications")</button>
     </div>
 }
 
 @if (pills == null)
 {
-    <p>Loading...</p>
+    <p>@L("Loading")</p>
 }
 else if (!pills.Any())
 {
-    <p>No pills added yet. Click 'Add New Pill' to get started.</p>
+    <p>@L("No_Pills_Added")</p>
 }
 else
 {
@@ -38,22 +38,22 @@ else
                     <h2>@pill.Name</h2>
                     <div class="pill-actions">
                         <button class="edit-button" @onclick="() => NavigateToEdit(pill.Id)">
-                            Edit
+                            @L("Edit")
                         </button>
                         <button class="delete-button" @onclick="() => DeletePill(pill.Id)">
-                            Delete
+                            @L("Delete")
                         </button>
                     </div>
                 </div>
 
                 <div class="pill-info">
-                    <p>Remaining: @pill.Quantity</p>
+                    <p>@L("Remaining"): @pill.Quantity</p>
                 </div>
 
                 <div class="dosages-list">
                     @if (pill.Dosages.Any())
                     {
-                        <h3>Dosage Schedule</h3>
+                        <h3>@L("Dosage_Schedule")</h3>
                         <ul>
                             @foreach (var dosage in pill.Dosages)
                             {
@@ -61,25 +61,25 @@ else
                                     <div>
                                         @if (dosage.Frequency == "Days")
                                         {
-                                            @($"Take {dosage.AmountTaken} {(dosage.AmountTaken == 1 ? "pill" : "pills")} every {dosage.Repetition} {(dosage.Repetition == 1 ? "day" : "days")} at {dosage.Time?.ToString("HH:mm")}")
+                                            @($"{L("Take")} {dosage.AmountTaken} {(dosage.AmountTaken == 1 ? L("Pill_Single") : L("Pills_Plural"))} {L("Every")} {dosage.Repetition} {(dosage.Repetition == 1 ? L("Day_Single") : L("Days_Plural"))} {L("At")} {dosage.Time?.ToString("HH:mm")}")
                                         }
                                         else if (dosage.Frequency == "Weeks")
                                         {
                                             <div>
-                                                Take {dosage.AmountTaken} {(dosage.AmountTaken == 1 ? "pill" : "pills")} weekly on:
+                                                @L("Take") @dosage.AmountTaken @(dosage.AmountTaken == 1 ? L("Pill_Single") : L("Pills_Plural")) @L("Weekly_On"):
                                                 @string.Join(", ", dosage.SelectedDays ?? new List<string>())
-                                                at @dosage.Time?.ToString("HH:mm")
+                                                @L("At") @dosage.Time?.ToString("HH:mm")
                                             </div>
                                         }
                                     </div>
-                                    <button class="take-pill-button" @onclick="() => TakePillDose(pill.Id, dosage.AmountTaken)">Take Dose</button>
+                                    <button class="take-pill-button" @onclick="() => TakePillDose(pill.Id, dosage.AmountTaken)">@L("Take_Dose")</button>
                                 </li>
                             }
                         </ul>
                     }
                     else
                     {
-                        <p>No dosages scheduled</p>
+                        <p>@L("No_Dosages_Scheduled")</p>
                     }
                 </div>
             </div>
@@ -252,7 +252,7 @@ else
 
     private async Task DeletePill(int pillId)
     {
-        var confirmed = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete this pill?");
+        var confirmed = await JS.InvokeAsync<bool>("confirm", L("Confirm_Delete_Pill"));
         if (confirmed)
         {
             await PillService.DeletePillAsync(pillId);
@@ -277,3 +277,4 @@ else
         await LoadPills();
     }
 }
+
