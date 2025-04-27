@@ -1,96 +1,95 @@
-﻿// MauiBlazorHybrid/Services/PillService.cs
-using MauiBlazorHybrid.Models;
+﻿using MauiBlazorHybrid.Models;
 using System.Text.Json;
 
 namespace MauiBlazorHybrid.Services;
 
-public class PillService : IPillService
+public class ProductService : IProductService
 {
     private readonly string _filePath;
-    private List<Pill> _pills = new();
+    private List<Product> _products = new();
     private readonly INotificationService _notificationService;
 
-    public PillService(INotificationService notificationService)
+    public ProductService(INotificationService notificationService)
     {
         _notificationService = notificationService;
         _filePath = Path.Combine(FileSystem.AppDataDirectory, "pills.json");
-        LoadPills();
+        LoadProducts();
     }
 
-    private void LoadPills()
+    private void LoadProducts()
     {
         if (File.Exists(_filePath))
         {
             var json = File.ReadAllText(_filePath);
-            _pills = JsonSerializer.Deserialize<List<Pill>>(json) ?? new();
+            _products = JsonSerializer.Deserialize<List<Product>>(json) ?? new();
             // Ensure all pills have a history collection
-            foreach (var pill in _pills)
+            foreach (var product in _products)
             {
-                pill.History ??= new List<PillHistory>();
+                product.History ??= new List<UsageHistory>();
             }
             // Reschedule notifications for all pills on load
-            foreach (var pill in _pills)
+            foreach (var product in _products)
             {
-                RescheduleNotificationsForPill(pill).ConfigureAwait(false);
+                RescheduleNotificationsForProduct(product).ConfigureAwait(false);
             }
         }
     }
 
-    private async Task SavePillsAsync()
+    private async Task SaveProductsAsync()
     {
-        var json = JsonSerializer.Serialize(_pills);
+        var json = JsonSerializer.Serialize(_products);
         await File.WriteAllTextAsync(_filePath, json);
     }
 
-    public async Task<List<Pill>> GetPillsAsync()
+    public async Task<List<Product>> GetProductsAsync()
     {
-        return _pills;
+        return _products;
     }
 
-    public async Task<Pill?> GetPillAsync(int id)
+    public async Task<Product?> GetProductAsync(int id)
     {
-        return _pills.FirstOrDefault(p => p.Id == id);
+        return _products.FirstOrDefault(p => p.Id == id);
     }
 
-    public async Task<Pill> AddPillAsync(Pill pill)
+    public async Task<Product> AddProductAsync(Product product)
     {
-        pill.Id = _pills.Count > 0 ? _pills.Max(p => p.Id) + 1 : 1;
-        pill.History ??= new List<PillHistory>();
-        _pills.Add(pill);
-        await SavePillsAsync();
+        product.Id = _products.Count > 0 ? _products.Max(p => p.Id) + 1 : 1;
+        product.History ??= new List<UsageHistory>();
+        _products.Add(product);
+        await SaveProductsAsync();
 
         // Schedule notifications for new pill
-        await ScheduleNotificationsForPill(pill);
+        await ScheduleNotificationsForProduct(product);
 
-        return pill;
+        return product;
     }
 
-    public async Task UpdatePillAsync(Pill pill)
+    public async Task UpdateProductAsync(Product product)
     {
-        var index = _pills.FindIndex(p => p.Id == pill.Id);
+        var index = _products.FindIndex(p => p.Id == product.Id);
         if (index != -1)
         {
             try
             {
                 // Preserve history if it exists in the current pill but not in the updated one
-                if (pill.History == null || !pill.History.Any())
+                if (product.History == null || !product.History.Any())
                 {
-                    pill.History = _pills[index].History ?? new List<PillHistory>();
+                    product.History = _products[index].History ?? new List<UsageHistory>();
                 }
 
                 // Cancel existing notifications
-                await _notificationService.CancelPillNotificationsAsync(pill.Id);
+                await _notificationService.CancelPillNotificationsAsync(product.Id);
 
-                _pills[index] = pill;
-                await SavePillsAsync();
+                _products[index] = product;
+                await SaveProductsAsync();
 
                 // Add debug output
-                System.Diagnostics.Debug.WriteLine($"Scheduling notifications for updated pill {pill.Id}");
+                System.Diagnostics.Debug.WriteLine($"Scheduling notifications for updated pill {product.Id}");
 
                 // Schedule new notifications and await it
-                await ScheduleNotificationsForPill(pill);
+                await ScheduleNotificationsForProduct(product);
 
-                System.Diagnostics.Debug.WriteLine($"Notifications scheduled for pill {pill.Id}");
+                System.Diagnostics.Debug.WriteLine($"Notifications scheduled for pill {product.Id}");
             }
             catch (Exception ex)
             {
@@ -100,51 +99,51 @@ public class PillService : IPillService
         }
     }
 
-    public async Task DeletePillAsync(int id)
+    public async Task DeleteProductAsync(int id)
     {
         // Cancel notifications before deleting
         await _notificationService.CancelPillNotificationsAsync(id);
 
-        _pills.RemoveAll(p => p.Id == id);
-        await SavePillsAsync();
+        _products.RemoveAll(p => p.Id == id);
+        await SaveProductsAsync();
     }
 
     // Explicit implementation of the interface method without optional parameter
-    public async Task<bool> TakePillDoseAsync(int pillId, double amount)
+    public async Task<bool> TakeProductDoseAsync(int productId, double amount)
     {
         // Call the overloaded method with null dosageId
-        return await TakePillDoseAsync(pillId, amount, null);
+        return await TakeProductDoseAsync(productId, amount, null);
     }
 
-    public async Task<bool> TakePillDoseAsync(int pillId, double amount, int? dosageId)
+    public async Task<bool> TakeProductDoseAsync(int productId, double amount, int? dosageId)
     {
-        var pill = _pills.FirstOrDefault(p => p.Id == pillId);
-        if (pill == null) return false;
+        var product = _products.FirstOrDefault(p => p.Id == productId);
+        if (product == null) return false;
 
         // Check if there's enough quantity
-        if (pill.Quantity >= amount)
+        if (product.Quantity >= amount)
         {
             // Reduce the quantity
-            pill.Quantity -= amount;
+            product.Quantity -= amount;
 
             // Record the pill intake in history
-            var historyEntry = new PillHistory
+            var historyEntry = new UsageHistory
             {
-                Id = pill.History.Count > 0 ? pill.History.Max(h => h.Id) + 1 : 1,
-                PillId = pillId,
+                Id = product.History.Count > 0 ? product.History.Max(h => h.Id) + 1 : 1,
+                ProductId = productId,
                 Timestamp = DateTime.Now,
                 AmountTaken = amount,
                 DosageId = dosageId
             };
 
-            pill.History.Add(historyEntry);
-            await SavePillsAsync();
+            product.History.Add(historyEntry);
+            await SaveProductsAsync();
 
             // Reschedule notifications after taking a pill to update the next dose time
             if (dosageId.HasValue)
             {
-                await _notificationService.CancelPillNotificationsAsync(pillId);
-                await ScheduleNotificationsForPill(pill);
+                await _notificationService.CancelPillNotificationsAsync(productId);
+                await ScheduleNotificationsForProduct(product);
             }
 
             return true;
@@ -153,65 +152,65 @@ public class PillService : IPillService
         return false;
     }
 
-    public async Task<bool> TakePillDoseFromScheduleAsync(int pillId, int dosageId)
+    public async Task<bool> TakeProductDoseFromScheduleAsync(int productId, int dosageId)
     {
-        var pill = _pills.FirstOrDefault(p => p.Id == pillId);
-        if (pill == null) return false;
+        var product = _products.FirstOrDefault(p => p.Id == productId);
+        if (product == null) return false;
 
-        var dosage = pill.Dosages.FirstOrDefault(d => d.Id == dosageId);
+        var dosage = product.Dosages.FirstOrDefault(d => d.Id == dosageId);
         if (dosage == null) return false;
 
         // Use the dosage amount for the pill intake
-        return await TakePillDoseAsync(pillId, dosage.AmountTaken, dosageId);
+        return await TakeProductDoseAsync(productId, dosage.AmountTaken, dosageId);
     }
 
-    public async Task<List<PillHistory>> GetPillHistoryAsync(int pillId)
+    public async Task<List<UsageHistory>> GetProductHistoryAsync(int productId)
     {
-        var pill = _pills.FirstOrDefault(p => p.Id == pillId);
-        return pill?.History?.OrderByDescending(h => h.Timestamp).ToList() ?? new List<PillHistory>();
+        var product = _products.FirstOrDefault(p => p.Id == productId);
+        return product?.History?.OrderByDescending(h => h.Timestamp).ToList() ?? new List<UsageHistory>();
     }
 
-    public async Task<List<PillHistory>> GetAllPillHistoryAsync()
+    public async Task<List<UsageHistory>> GetAllProductHistoryAsync()
     {
-        var allHistory = new List<PillHistory>();
-        foreach (var pill in _pills)
+        var allHistory = new List<UsageHistory>();
+        foreach (var product in _products)
         {
-            if (pill.History != null && pill.History.Any())
+            if (product.History != null && product.History.Any())
             {
-                allHistory.AddRange(pill.History);
+                allHistory.AddRange(product.History);
             }
         }
         return allHistory.OrderByDescending(h => h.Timestamp).ToList();
     }
 
-    public async Task AddPillHistoryManuallyAsync(PillHistory history)
+    public async Task AddProductHistoryManuallyAsync(UsageHistory history)
     {
-        var pill = _pills.FirstOrDefault(p => p.Id == history.PillId);
-        if (pill != null)
+        var product = _products.FirstOrDefault(p => p.Id == history.ProductId);
+        if (product != null)
         {
             // Assign a new ID to the history entry
-            history.Id = pill.History.Count > 0 ? pill.History.Max(h => h.Id) + 1 : 1;
+            history.Id = product.History.Count > 0 ? product.History.Max(h => h.Id) + 1 : 1;
 
             // Add the history entry
-            pill.History.Add(history);
-            await SavePillsAsync();
+            product.History.Add(history);
+            await SaveProductsAsync();
 
             // Reschedule notifications if this was for a specific dosage
             if (history.DosageId.HasValue)
             {
-                await _notificationService.CancelPillNotificationsAsync(pill.Id);
-                await ScheduleNotificationsForPill(pill);
+                await _notificationService.CancelPillNotificationsAsync(product.Id);
+                await ScheduleNotificationsForProduct(product);
             }
         }
     }
 
-    private async Task ScheduleNotificationsForPill(Pill pill)
+    private async Task ScheduleNotificationsForProduct(Product product)
     {
         // We'll calculate and schedule only the next upcoming dose for each dosage
-        foreach (var dosage in pill.Dosages)
+        foreach (var dosage in product.Dosages)
         {
             // Find when this dosage was last taken
-            var lastTaken = pill.History
+            var lastTaken = product.History
                 .Where(h => h.DosageId == dosage.Id)
                 .OrderByDescending(h => h.Timestamp)
                 .FirstOrDefault();
@@ -219,11 +218,11 @@ public class PillService : IPillService
             DateTime nextDoseTime = CalculateNextDoseTime(dosage, lastTaken?.Timestamp);
 
             // Schedule notification for this next dose
-            await _notificationService.SchedulePillNotificationAsync(pill, dosage, nextDoseTime);
+            await _notificationService.SchedulePillNotificationAsync(product, dosage, nextDoseTime);
         }
     }
 
-    private DateTime CalculateNextDoseTime(PillDosage dosage, DateTime? lastTakenTime)
+    private DateTime CalculateNextDoseTime(DosageSchedule dosage, DateTime? lastTakenTime)
     {
         // Current time to base calculations on
         DateTime now = DateTime.Now;
@@ -380,14 +379,14 @@ public class PillService : IPillService
         };
     }
 
-    private async Task RescheduleNotificationsForPill(Pill pill)
+    private async Task RescheduleNotificationsForProduct(Product pill)
     {
         try
         {
             // Cancel any existing notifications
             await _notificationService.CancelPillNotificationsAsync(pill.Id);
             // Schedule new notifications
-            await ScheduleNotificationsForPill(pill);
+            await ScheduleNotificationsForProduct(pill);
         }
         catch (Exception ex)
         {

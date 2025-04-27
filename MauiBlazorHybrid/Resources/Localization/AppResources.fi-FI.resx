@@ -1,198 +1,202 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
-    <data name="Main_Tittle" xml:space="preserve">
-    <value>Tuotteesi.</value>
-  </data>
-	<data name="Notifications_Not_Enabled" xml:space="preserve">
-    <value>Ilmoitukset eivät ole käytössä. Jotkut ominaisuudet eivät ehkä toimi oikein.</value>
-  </data>
-	<data name="Enable_Notifications" xml:space="preserve">
-    <value>Salli ilmoitukset</value>
-  </data>
 	<data name="Loading" xml:space="preserve">
-    <value>Ladataan...</value>
-  </data>
+		<value>Ladataan...</value>
+	</data>
 	<data name="No_Pills_Added" xml:space="preserve">
-    <value>Tuotteita ei ole vielä lisätty. Aloita napsauttamalla Lisää uusi pilleri.</value>
-  </data>
+		<value>Tuotteita ei ole vielä lisätty. Aloita napsauttamalla Lisää uusi pilleri.</value>
+	</data>
 	<data name="Add_New_Pill" xml:space="preserve">
-    <value>Lisää uusi</value>
-  </data>
-	<data name="Remaining" xml:space="preserve">
-    <value>Jäljellä</value>
-  </data>
-	<data name="Dosage_Schedule" xml:space="preserve">
-    <value>Annosten aikataulu</value>
-  </data>
-	<data name="Take" xml:space="preserve">
-    <value>Ota annos</value>
-  </data>
-	<data name="Pill_Single" xml:space="preserve">
-    <value>Tuote</value>
-  </data>
-	<data name="Pills_Plural" xml:space="preserve">
-    <value>Tuotteet</value>
-  </data>
-	<data name="Every" xml:space="preserve">
-    <value>Päivittäin</value>
-  </data>
-	<data name="Day_Single" xml:space="preserve">
-    <value>Päivä</value>
-  </data>
-	<data name="Days_Plural" xml:space="preserve">
-    <value>Päivät</value>
-  </data>
-	<data name="At" xml:space="preserve">
-    <value>kello</value>
-  </data>
-	<data name="Weekly_On" xml:space="preserve">
-    <value>weekly on</value>
-  </data>
+		<value>Lisää uusi</value>
+	</data>
+	<data name="Upcoming_Doses" xml:space="preserve">
+		<value>Tulossa olevat</value>
+	</data>
+	<data name="Today" xml:space="preserve">
+		<value>Tänään</value>
+	</data>
+	<data name="Tomorrow" xml:space="preserve">
+		<value>Huomenna</value>
+	</data>
 	<data name="Take_Dose" xml:space="preserve">
-    <value>Ota annos</value>
-  </data>
-	<data name="No_Dosages_Scheduled" xml:space="preserve">
-    <value>Ei annoksien aikoja määritetty</value>
-  </data>
-	<data name="Confirm_Delete_Pill" xml:space="preserve">
-    <value>Oletko varma että haluat poistaa tämän tuotteen?</value>
-  </data>
+		<value>Merkitse otetuksi</value>
+	</data>
+	<data name="Manage_Tittle" xml:space="preserve">
+		<value>Hallinta</value>
+	</data>
+	<data name="Add_New_Product" xml:space="preserve">
+		<value>Lisää uusi</value>
+	</data>
 	<data name="Edit" xml:space="preserve">
-    <value>Muokkaa</value>
-  </data>
+		<value>Muokkaa</value>
+	</data>
 	<data name="Delete" xml:space="preserve">
-    <value>Poista</value>
-  </data>
-	<data name="EditPill" xml:space="preserve">
-    <value>Muokkaa tuotetta</value>
-  </data>
-	<data name="AddNewPill" xml:space="preserve">
-    <value>Lisää uusi</value>
-  </data>
-	<data name="PillName" xml:space="preserve">
-    <value>Nimi</value>
-  </data>
-	<data name="QuantityLeft" xml:space="preserve">
-    <value>Jäljellä</value>
-  </data>
-	<data name="PillsPerPackage" xml:space="preserve">
-    <value>Kappaleita paketissa</value>
-  </data>
-	<data name="Dosages" xml:space="preserve">
-    <value>Annoksia</value>
-  </data>
-	<data name="Time" xml:space="preserve">
-    <value>Aika</value>
-  </data>
-	<data name="AmountTaken" xml:space="preserve">
-    <value>Annos määrä</value>
-  </data>
-	<data name="Repetition" xml:space="preserve">
-    <value>Toisuvuus</value>
-  </data>
-	<data name="Frequency" xml:space="preserve">
-    <value>Frequency</value>
-  </data>
-	<data name="Days" xml:space="preserve">
-    <value>Päivittäin</value>
-  </data>
-	<data name="Weeks" xml:space="preserve">
-    <value>Viikottain</value>
-  </data>
-	<data name="SelectWeekdays" xml:space="preserve">
-    <value>Valitse viikon päivät</value>
-  </data>
-	<data name="Mon" xml:space="preserve">
-    <value>Ma</value>
-  </data>
-	<data name="Tue" xml:space="preserve">
-    <value>Ti</value>
-  </data>
-	<data name="Wed" xml:space="preserve">
-    <value>Ke</value>
-  </data>
-	<data name="Thu" xml:space="preserve">
-    <value>To</value>
-  </data>
-	<data name="Fri" xml:space="preserve">
-    <value>Pe</value>
-  </data>
-	<data name="Sat" xml:space="preserve">
-    <value>La</value>
-  </data>
-	<data name="Sun" xml:space="preserve">
-    <value>Su</value>
-  </data>
-	<data name="AddAnotherDosage" xml:space="preserve">
-    <value>Lisää uusi annos</value>
-  </data>
-	<data name="AddDosage" xml:space="preserve">
-    <value>Lisää annos</value>
-  </data>
-	<data name="SaveChanges" xml:space="preserve">
-    <value>Tallenna</value>
-  </data>
-	<data name="AddPill" xml:space="preserve">
-    <value>Lisää Tuote</value>
-  </data>
-	<data name="Cancel" xml:space="preserve">
-    <value>Peru</value>
-  </data>
-	<data name="Settings" xml:space="preserve">
-    <value>Asetukset</value>
-  </data>
-	<data name="Language" xml:space="preserve">
-    <value>Kieli</value>
-  </data>
-	<data name="Select_Language" xml:space="preserve">
-    <value>Valitse haluamasi kieli</value>
-  </data>
-	<data name="Language_Change_Info" xml:space="preserve">
-    <value>Kieliasetukset otetaan käyttöön välittömästi ja ne muistetaan seuraavalla kerralla.</value>
-  </data>
-	<data name="Home" xml:space="preserve">
-    <value>Koti</value>
-  </data>
-	<data name="Pills" xml:space="preserve">
-    <value>Tuotteet</value>
-  </data>
-	<data name="DosageSchedule_Days_Format_Line1" xml:space="preserve">
-    <value>Ota {amount} {unit} {repetitionText}</value>
-  </data>
-	<data name="DosageSchedule_Days_Format_Line2" xml:space="preserve">
-    <value>kello {time}</value>
-  </data>
-	<data name="DosageSchedule_Weeks_Format_Line1" xml:space="preserve">
-    <value>Ota {amount} {unit} {repetitionText}</value>
-  </data>
-	<data name="DosageSchedule_Weeks_Format_Line2" xml:space="preserve">
-    <value>kello {time}</value>
-  </data>
-	<data name="DosageSchedule_Weeks_Format" xml:space="preserve">
-    <value>Ota {amount} {unit} viikottain päivinä: {days} kello {time}</value>
-  </data>
+		<value>Poista</value>
+	</data>
+	<data name="Remaining" xml:space="preserve">
+		<value>Jäljellä</value>
+	</data>
+	<data name="Dosage_Schedule" xml:space="preserve">
+		<value>Annosten ajat</value>
+	</data>
+	<data name="Upcoming_Doses" xml:space="preserve">
+		<value>Tulossa olevat</value>
+	</data>
+
+	<!-- Unit texts -->
+	<data name="Unit_Single" xml:space="preserve">
+		<value>annos</value>
+	</data>
+	<data name="Unit_Plural" xml:space="preserve">
+		<value>annosta</value>
+	</data>
+
+	<!-- Daily dose texts -->
 	<data name="Repetition_Daily" xml:space="preserve">
-    <value>päivittäin</value>
-  </data>
+		<value>joka päivä</value>
+	</data>
 	<data name="Repetition_EveryOtherDay" xml:space="preserve">
-    <value>joka toinen päivä</value>
-  </data>
-	<data name="Repetition_Generic" xml:space="preserve">
-    <value>{count} päivän välein</value>
-  </data>
-	<data name="Week_Single" xml:space="preserve">
-    <value>viikko</value>
-  </data>
-	<data name="Weeks_Plural" xml:space="preserve">
-    <value>viikkoa</value>
-  </data>
+		<value>joka toinen päivä</value>
+	</data>
+	<data name="Repetition_EveryXDays" xml:space="preserve">
+		<value>{0} päivän välein</value>
+	</data>
+
+	<!-- Weekly texts -->
 	<data name="Repetition_Weekly" xml:space="preserve">
-    <value>viikottain</value>
-  </data>
+		<value>kerran viikossa</value>
+	</data>
 	<data name="Repetition_EveryOtherWeek" xml:space="preserve">
-    <value>joka toinen viikko</value>
-  </data>
+		<value>joka toinen viikko</value>
+	</data>
 	<data name="Repetition_WeekGeneric" xml:space="preserve">
-    <value>{count} viikon välein</value>
-  </data>
+		<value>joka {count}. viikko</value>
+	</data>
+
+	<!-- Generic words -->
+	<data name="Every" xml:space="preserve">
+		<value>joka</value>
+	</data>
+	<data name="Day_Single" xml:space="preserve">
+		<value>päivä</value>
+	</data>
+	<data name="Days_Plural" xml:space="preserve">
+		<value>päivää</value>
+	</data>
+	<data name="Days" xml:space="preserve">
+		<value>Päivissä</value>
+	</data>
+	<data name="Week_Single" xml:space="preserve">
+		<value>viikko</value>
+	</data>
+	<data name="Weeks_Plural" xml:space="preserve">
+		<value>viikkoa</value>
+	</data>
+	<data name="Weeks" xml:space="preserve">
+		<value>Viikoissa</value>
+	</data>
+	<data name="At" xml:space="preserve">
+		<value>klo</value>
+	</data>
+
+	<!-- Dosage formats with named parameters -->
+	<data name="DosageSchedule_Days_Format_Line1" xml:space="preserve">
+		<value>Ota {amount} {unit} {repetitionText}</value>
+	</data>
+	<data name="DosageSchedule_Days_Format_Line2" xml:space="preserve">
+		<value>klo {time}</value>
+	</data>
+	<data name="DosageSchedule_Weeks_Format_Line1" xml:space="preserve">
+		<value>Ota {amount} {unit} viikoittain</value>
+	</data>
+	<data name="DosageSchedule_Weeks_Format_Line2" xml:space="preserve">
+		<value>päivinä: {days} klo {time}</value>
+	</data>
+	<data name="Edit_Product" xml:space="preserve">
+		<value>Muokkaa</value>
+	</data>
+	<data name="Product_Name" xml:space="preserve">
+		<value>Nimi</value>
+	</data>
+	<data name="Quantity_Left" xml:space="preserve">
+		<value>Jäljellä</value>
+	</data>
+	<data name="Unit" xml:space="preserve">
+		<value>Yksikkö</value>
+	</data>
+	<data name="Products_Per_Package" xml:space="preserve">
+		<value>{unit} pakkauksessa</value>
+	</data>
+	<data name="Dosages" xml:space="preserve">
+		<value>Annos ajat</value>
+	</data>
+	<data name="Time" xml:space="preserve">
+		<value>Kello</value>
+	</data>
+	<data name="Amount_Taken" xml:space="preserve">
+		<value>Annos koko</value>
+	</data>
+	<data name="Repetition" xml:space="preserve">
+		<value>Toistuvuus</value>
+	</data>
+	<data name="Frequency" xml:space="preserve">
+		<value>Päivissä/Viikoissa</value>
+	</data>
+	<data name="Select_Weekdays" xml:space="preserve">
+		<value>Valitse viikon päivät</value>
+	</data>
+	<data name="Mon" xml:space="preserve">
+		<value>Ma</value>
+	</data>
+	<data name="Tue" xml:space="preserve">
+		<value>Ti</value>
+	</data>
+	<data name="Wed" xml:space="preserve">
+		<value>Ke</value>
+	</data>
+	<data name="Thu" xml:space="preserve">
+		<value>To</value>
+	</data>
+	<data name="Fri" xml:space="preserve">
+		<value>Pe</value>
+	</data>
+	<data name="Sat" xml:space="preserve">
+		<value>La</value>
+	</data>
+	<data name="Sun" xml:space="preserve">
+		<value>Su</value>
+	</data>
+	<data name="Add_Another_Dosage" xml:space="preserve">
+		<value>Lisää uusi annos</value>
+	</data>
+	<data name="Save_Changes" xml:space="preserve">
+		<value>Tallenna muutokset</value>
+	</data>
+	<data name="Cancel" xml:space="preserve">
+		<value>Peru</value>
+	</data>
+	<data name="Add_Dosage" xml:space="preserve">
+		<value>Lisää annos</value>
+	</data>
+	<data name="Add_Product" xml:space="preserve">
+		<value>Tallenna uusi</value>
+	</data>
+	<data name="Settings" xml:space="preserve">
+		<value>Asetukset</value>
+	</data>
+	<data name="Language" xml:space="preserve">
+		<value>Kieli</value>
+	</data>
+	<data name="Select_Language" xml:space="preserve">
+		<value>Valitse kieli</value>
+	</data>
+	<data name="Home" xml:space="preserve">
+		<value>Koti</value>
+	</data>
+	<data name="Manage" xml:space="preserve">
+		<value>Hallitse</value>
+	</data>
+	<data name="No_Products_Added" xml:space="preserve">
+		<value>Luo ensimmäinen tuote valitsemalla Lisää uusi!</value>
+	</data>
 </root>

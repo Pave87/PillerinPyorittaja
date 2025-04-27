@@ -2,7 +2,7 @@
 @using MauiBlazorHybrid.Models
 @using MauiBlazorHybrid.Services
 @using Microsoft.JSInterop
-@inject IPillService PillService
+@inject IProductService ProductService
 @inject INotificationService NotificationService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JS
@@ -16,14 +16,14 @@
             </div>
 }
 
-@if (pills == null)
+@if (products == null)
 {
             <p>@L("Loading")</p>
 }
-else if (!pills.Any())
+else if (!products.Any())
 {
-            <p>@L("No_Pills_Added")</p>
-            <button class="add-pill-button" @onclick="NavigateToAddPill">@L("Add_New_Pill")</button>
+            <p>@L("No_Products_Added")</p>
+            <button class="add-product-button" @onclick="NavigateToAddProduct">@L("Add_New_Product")</button>
 }
 else
 {
@@ -36,15 +36,15 @@ else
                 {
                                             <div class="missed-dose-item">
                                                 <div class="dose-info">
-                                                    <span class="pill-name">@dose.PillName</span>
+                                                    <span class="product-name">@dose.ProductName</span>
                                                     <span class="dose-detail">@dose.AmountTaken @dose.Unit</span>
                                                 </div>
                                                 <div class="dose-time">
                                                     <span class="missed-text">@FormatMissedDoseTime(dose.ScheduledTime)</span>
                                                 </div>
                                                 <div class="dose-actions">
-                                                    <button class="take-pill-button" @onclick="() => TakePillDoseFromDosage(dose.PillId, dose.DosageId, dose.AmountTaken)">@L("Take_Now")</button>
-                                                    <button class="skip-pill-button" @onclick="() => SkipMissedDose(dose)">@L("Skip")</button>
+                                                    <button class="take-product-button" @onclick="() => TakeProductDoseFromDosage(dose.ProductId, dose.DosageId, dose.AmountTaken)">@L("Take_Now")</button>
+                                                    <button class="skip-product-button" @onclick="() => SkipMissedDose(dose)">@L("Skip")</button>
                                                 </div>
                                             </div>
                 }
@@ -59,9 +59,9 @@ else
                             <div class="upcoming-doses-list">
                 @foreach (var dose in upcomingDoses.OrderBy(d => d.NextDoseTime).Take(5))
                 {
-                                            <div class="upcoming-dose-item @(IsRecentlyDue(dose.NextDoseTime) ? "recent-due" : "")">
+                                            <div class="upcoming-dose-item @(IsRecentlyDue(dose.NextDoseTime) ? "recent_due" : "")">
                                                 <div class="dose-info">
-                                                    <span class="pill-name">@dose.PillName</span>
+                                                    <span class="product-name">@dose.ProductName</span>
                                                     <span class="dose-detail">@dose.AmountTaken @dose.Unit</span>
                                                 </div>
                                                 <div class="dose-time">
@@ -74,7 +74,7 @@ else
                                                                 <span>@FormatNextDoseTime(dose.NextDoseTime)</span>
                             }
                                                 </div>
-                                                <button class="take-pill-button" @onclick="() => TakePillDoseFromDosage(dose.PillId, dose.DosageId, dose.AmountTaken)">@L("Take_Dose")</button>
+                                                <button class="take-product-button" @onclick="() => TakeProductDoseFromDosage(dose.ProductId, dose.DosageId, dose.AmountTaken)">@L("Take_Dose")</button>
                                             </div>
                 }
                             </div>
@@ -126,7 +126,7 @@ else
         flex-direction: column;
     }
 
-    .pill-name {
+    .product-name {
         font-weight: bold;
         font-size: 1.1rem;
     }
@@ -155,7 +155,7 @@ else
         gap: 0.5rem;
     }
 
-    .add-pill-button {
+    .add-product-button {
         padding: 0.75rem 1.5rem;
         background-color: #28a745;
         color: white;
@@ -185,7 +185,7 @@ else
         margin-top: 0.5rem;
     }
 
-    .take-pill-button {
+    .take-product-button {
         padding: 0.5rem 0.75rem;
         background-color: #28a745;
         color: white;
@@ -196,7 +196,7 @@ else
         margin-left: 0.5rem;
     }
 
-    .skip-pill-button {
+    .skip-product-button {
         padding: 0.5rem 0.75rem;
         background-color: #6c757d;
         color: white;
@@ -212,7 +212,7 @@ else
 </style>
 
 @code {
-    private List<Pill>? pills;
+    private List<Product>? products;
     private bool _permissionGranted;
     private List<UpcomingDose> upcomingDoses = new();
     private List<MissedDose> missedDoses = new();
@@ -220,8 +220,8 @@ else
     // Class to store information about upcoming doses
     private class UpcomingDose
     {
-        public int PillId { get; set; }
-        public string PillName { get; set; } = string.Empty;
+        public int ProductId { get; set; }
+        public string ProductName { get; set; } = string.Empty;
         public int DosageId { get; set; }
         public double AmountTaken { get; set; }
         public string Unit { get; set; } = string.Empty;
@@ -231,8 +231,8 @@ else
     // Class to store information about missed doses
     private class MissedDose
     {
-        public int PillId { get; set; }
-        public string PillName { get; set; } = string.Empty;
+        public int ProductId { get; set; }
+        public string ProductName { get; set; } = string.Empty;
         public int DosageId { get; set; }
         public double AmountTaken { get; set; }
         public string Unit { get; set; } = string.Empty;
@@ -242,31 +242,31 @@ else
     protected override async Task OnInitializedAsync()
     {
         await CheckNotificationPermission();
-        await LoadPills();
+        await LoadProducts();
         await CalculateUpcomingDoses();
         await CalculateMissedDoses();
     }
 
-    private async Task LoadPills()
+    private async Task LoadProducts()
     {
-        pills = await PillService.GetPillsAsync();
+        products = await ProductService.GetProductsAsync();
     }
 
     private async Task CalculateUpcomingDoses()
     {
         upcomingDoses.Clear();
 
-        if (pills == null) return;
+        if (products == null) return;
 
-        foreach (var pill in pills)
+        foreach (var product in products)
         {
             DateTime? earliestDoseTime = null;
-            PillDosage? earliestDosage = null;
+            DosageSchedule? earliestDosage = null;
 
-            // Find the earliest upcoming dose for this pill
-            foreach (var dosage in pill.Dosages)
+            // Find the earliest upcoming dose for this product
+            foreach (var dosage in product.Dosages)
             {
-                var nextDoseTime = GetNextDoseTime(pill, dosage);
+                var nextDoseTime = GetNextDoseTime(product, dosage);
                 if (nextDoseTime.HasValue)
                 {
                     if (earliestDoseTime == null || nextDoseTime.Value < earliestDoseTime.Value)
@@ -277,16 +277,16 @@ else
                 }
             }
 
-            // Add only the earliest dose for this pill
+            // Add only the earliest dose for this product
             if (earliestDoseTime.HasValue && earliestDosage != null)
             {
                 upcomingDoses.Add(new UpcomingDose
                     {
-                        PillId = pill.Id,
-                        PillName = pill.Name,
+                        ProductId = product.Id,
+                        ProductName = product.Name,
                         DosageId = earliestDosage.Id,
                         AmountTaken = earliestDosage.AmountTaken,
-                        Unit = pill.Unit,
+                        Unit = product.Unit,
                         NextDoseTime = earliestDoseTime.Value
                     });
             }
@@ -297,16 +297,16 @@ else
     {
         missedDoses.Clear();
 
-        if (pills == null) return;
+        if (products == null) return;
 
         DateTime now = DateTime.Now;
 
-        foreach (var pill in pills)
+        foreach (var product in products)
         {
-            foreach (var dosage in pill.Dosages)
+            foreach (var dosage in product.Dosages)
             {
                 // Find when this dosage was last taken
-                var lastTaken = pill.History
+                var lastTaken = product.History
                     .Where(h => h.DosageId == dosage.Id)
                     .OrderByDescending(h => h.Timestamp)
                     .FirstOrDefault();
@@ -341,7 +341,7 @@ else
                             );
 
                             // If this scheduled time is in the past but not taken, it's missed
-                            if (scheduledDateTime < now && !IsDosageTaken(pill, dosage.Id, scheduledDateTime))
+                            if (scheduledDateTime < now && !IsDosageTaken(product, dosage.Id, scheduledDateTime))
                             {
                                 missedDoseTimes.Add(scheduledDateTime);
                             }
@@ -391,7 +391,7 @@ else
                                     );
 
                                     // If this scheduled time is in the past but not taken, it's missed
-                                    if (scheduledDateTime < now && !IsDosageTaken(pill, dosage.Id, scheduledDateTime))
+                                    if (scheduledDateTime < now && !IsDosageTaken(product, dosage.Id, scheduledDateTime))
                                     {
                                         missedDoseTimes.Add(scheduledDateTime);
                                     }
@@ -406,11 +406,11 @@ else
                 {
                     missedDoses.Add(new MissedDose
                         {
-                            PillId = pill.Id,
-                            PillName = pill.Name,
+                            ProductId = product.Id,
+                            ProductName = product.Name,
                             DosageId = dosage.Id,
                             AmountTaken = dosage.AmountTaken,
-                            Unit = pill.Unit,
+                            Unit = product.Unit,
                             ScheduledTime = missedTime
                         });
                 }
@@ -421,22 +421,22 @@ else
         missedDoses = missedDoses.OrderByDescending(d => d.ScheduledTime).Take(10).ToList();
     }
 
-    private bool IsDosageTaken(Pill pill, int dosageId, DateTime scheduledTime)
+    private bool IsDosageTaken(Product product, int dosageId, DateTime scheduledTime)
     {
         // Check if there's a history entry for this dosage within a reasonable time window (+/- 2 hours)
         var startWindow = scheduledTime.AddHours(-2);
         var endWindow = scheduledTime.AddHours(2);
 
-        return pill.History.Any(h =>
+        return product.History.Any(h =>
             h.DosageId == dosageId &&
             h.Timestamp >= startWindow &&
             h.Timestamp <= endWindow);
     }
 
-    private DateTime? GetNextDoseTime(Pill pill, PillDosage dosage)
+    private DateTime? GetNextDoseTime(Product product, DosageSchedule dosage)
     {
         // Find when this dosage was last taken
-        var lastTaken = pill.History
+        var lastTaken = product.History
             .Where(h => h.DosageId == dosage.Id)
             .OrderByDescending(h => h.Timestamp)
             .FirstOrDefault();
@@ -444,7 +444,7 @@ else
         return CalculateNextDoseTime(dosage, lastTaken?.Timestamp);
     }
 
-    private DateTime? CalculateNextDoseTime(PillDosage dosage, DateTime? lastTakenTime)
+    private DateTime? CalculateNextDoseTime(DosageSchedule dosage, DateTime? lastTakenTime)
     {
         if (dosage.Time == null) return null;
 
@@ -460,7 +460,7 @@ else
             dosage.Time.Value.Minute,
             0);
 
-        // If we've never taken this pill before
+        // If we've never taken this product before
         if (lastTakenTime == null)
         {
             // If today's dose time is already past, schedule for next occurrence
@@ -481,7 +481,7 @@ else
         }
         else
         {
-            // We have a record of when this pill was last taken
+            // We have a record of when this product was last taken
             DateTime lastTaken = lastTakenTime.Value;
 
             // Calculate the next dose based on frequency and repetition
@@ -669,17 +669,17 @@ else
         StateHasChanged();
     }
 
-    private void NavigateToAddPill()
+    private void NavigateToAddProduct()
     {
-        NavigationManager.NavigateTo("/addpill");
+        NavigationManager.NavigateTo("/addproduct");
     }
 
-    private async Task TakePillDoseFromDosage(int pillId, int dosageId, double amountTaken)
+    private async Task TakeProductDoseFromDosage(int productId, int dosageId, double amountTaken)
     {
-        var success = await PillService.TakePillDoseAsync(pillId, amountTaken, dosageId);
+        var success = await ProductService.TakeProductDoseAsync(productId, amountTaken, dosageId);
 
-        // Refresh the pill list to show updated quantities
-        await LoadPills();
+        // Refresh the product list to show updated quantities
+        await LoadProducts();
         await CalculateUpcomingDoses();
         await CalculateMissedDoses();
     }
@@ -687,18 +687,18 @@ else
     private async Task SkipMissedDose(MissedDose missedDose)
     {
         // Record a skipped dose by creating a history entry with amount taken as 0
-        var skipHistory = new PillHistory
+        var skipHistory = new UsageHistory
             {
-                PillId = missedDose.PillId,
+                ProductId = missedDose.ProductId,
                 DosageId = missedDose.DosageId,
                 Timestamp = missedDose.ScheduledTime,
                 AmountTaken = 0 // 0 indicates a skipped dose
             };
 
-        await PillService.AddPillHistoryManuallyAsync(skipHistory);
+        await ProductService.AddProductHistoryManuallyAsync(skipHistory);
 
         // Recalculate doses
-        await LoadPills();
+        await LoadProducts();
         await CalculateUpcomingDoses();
         await CalculateMissedDoses();
     }

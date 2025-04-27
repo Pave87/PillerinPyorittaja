@@ -57,7 +57,7 @@ namespace MauiBlazorHybrid.Services
             return permissionGranted;
         }
 
-        public async Task SchedulePillNotificationAsync(Pill pill, PillDosage dosage)
+        public async Task SchedulePillNotificationAsync(Product pill, DosageSchedule dosage)
         {
             // Find the most recent history entry for this dosage
             var lastTaken = pill.History
@@ -76,12 +76,12 @@ namespace MauiBlazorHybrid.Services
             await toast.Show();
         }
 
-        public async Task SchedulePillNotificationAsync(Pill pill, PillDosage dosage, DateTime nextDoseTime)
+        public async Task SchedulePillNotificationAsync(Product pill, DosageSchedule dosage, DateTime nextDoseTime)
         {
             await ScheduleNotification(pill, dosage, nextDoseTime, 0); // No auto-repeat, we'll manually schedule
         }
 
-        private DateTime CalculateNextDoseTime(PillDosage dosage, DateTime? lastTakenTime)
+        private DateTime CalculateNextDoseTime(DosageSchedule dosage, DateTime? lastTakenTime)
         {
             // Current time to base calculations on
             DateTime now = DateTime.Now;
@@ -223,7 +223,7 @@ namespace MauiBlazorHybrid.Services
             return startDate.AddDays(daysToAdd);
         }
 
-        private async Task ScheduleNotification(Pill pill, PillDosage dosage, DateTime scheduleTime, int repeatDays)
+        private async Task ScheduleNotification(Product pill, DosageSchedule dosage, DateTime scheduleTime, int repeatDays)
         {
             try
             {

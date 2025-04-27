@@ -1,23 +1,23 @@
-﻿@page "/addpill"
-@page "/addpill/{Id:int?}"
+﻿@page "/addproduct"
+@page "/addproduct/{Id:int?}"
 @using MauiBlazorHybrid.Models
 @using MauiBlazorHybrid.Services
 @using MauiBlazorHybrid.Extensions
-@inject IPillService PillService
+@inject IProductService ProductService
 @inject NavigationManager NavigationManager
 @inherits LocalizeComponent
 
-<h1>@L(Id.HasValue ? "EditPill" : "AddNewPill")</h1>
+<h1>@L(Id.HasValue ? "Edit_Product" : "Add_New_Product")</h1>
 
 <form>
     <div class="form-group">
-        <label for="pillName">@L("PillName"):</label>
-        <input id="pillName" type="text" @bind="PillName" class="form-control" />
+        <label for="productName">@L("Product_Name"):</label>
+        <input id="productName" type="text" @bind="ProductName" class="form-control" />
     </div>
 
     <div class="form-group">
-        <label for="pillQuantity">@L("QuantityLeft"):</label>
-        <input id="pillQuantity" type="number" @bind="PillQuantity" min="0" step="0.5" class="form-control" />
+        <label for="productQuantity">@L("Quantity_Left"):</label>
+        <input id="productQuantity" type="number" @bind="ProductQuantity" min="0" step="0.5" class="form-control" />
     </div>
 
     <div class="form-group">
@@ -26,7 +26,7 @@
     </div>
 
     <div class="form-group">
-        <label for="amountPerPackage">@L("PillsPerPackage"):</label>
+        <label for="amountPerPackage">@L("Products_Per_Package"):</label>
         <input id="amountPerPackage" type="number" @bind="AmountPerPackage" min="1" step="1" class="form-control" />
     </div>
 
@@ -43,7 +43,7 @@
             </div>
 
             <div class="form-group">
-                <label>@L("AmountTaken"):</label>
+                <label>@L("Amount_Taken"):</label>
                 <input type="number" @bind="dosage.AmountTaken" class="form-control" style="width: 100px;" step="0.5" min="0.5" />
             </div>
 
@@ -63,7 +63,7 @@
             @if (dosage.Frequency == "Weeks")
             {
                 <div class="weekday-selection">
-                    <label>@L("SelectWeekdays"):</label>
+                    <label>@L("Select_Weekdays"):</label>
                     <div class="weekday-checkboxes">
                         @foreach (var day in WeekDays)
                         {
@@ -80,18 +80,18 @@
 
             @if (index == Dosages.Count - 1)
             {
-                <button type="button" class="btn-add-dosage" @onclick="AddNewDosageRow">@L("AddAnotherDosage")</button>
+                <button type="button" class="btn-add-dosage" @onclick="AddNewDosageRow">@L("Add_Another_Dosage")</button>
             }
         </div>
     }
 
     @if (!Dosages.Any())
     {
-        <button type="button" class="btn-add-dosage" @onclick="AddNewDosageRow">@L("AddDosage")</button>
+        <button type="button" class="btn-add-dosage" @onclick="AddNewDosageRow">@L("Add_Dosage")</button>
     }
 
     <div class="form-actions">
-        <button type="button" class="btn-submit" @onclick="HandleSubmit">@L(Id.HasValue ? "SaveChanges" : "AddPill")</button>
+        <button type="button" class="btn-submit" @onclick="HandleSubmit">@L(Id.HasValue ? "Save_Changes" : "Add_Product")</button>
         <button type="button" class="btn-cancel" @onclick="Cancel">@L("Cancel")</button>
     </div>
 </form>
@@ -194,11 +194,11 @@
     [Parameter]
     public int? Id { get; set; }
 
-    private string PillName { get; set; } = string.Empty;
-    private double PillQuantity { get; set; } = 0;
+    private string ProductName { get; set; } = string.Empty;
+    private double ProductQuantity { get; set; } = 0;
     private double AmountPerPackage { get; set; } = 1;
     private string Unit { get; set; } = string.Empty;
-    private List<PillDosage> Dosages { get; set; } = new();
+    private List<DosageSchedule> Dosages { get; set; } = new();
     private readonly string[] WeekDays = new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
     private int _nextDosageId = 1; // Track next dosage ID
 
@@ -208,17 +208,17 @@
         {
             if (Id.HasValue)
             {
-                var pill = await PillService.GetPillAsync(Id.Value);
-                if (pill != null)
+                var product = await ProductService.GetProductAsync(Id.Value);
+                if (product != null)
                 {
-                    PillName = pill.Name;
-                    PillQuantity = pill.Quantity;
-                    AmountPerPackage = pill.AmountPerPackage;
-                    Unit = pill.Unit;
-                    Dosages = pill.Dosages.Select(d => new PillDosage
+                    ProductName = product.Name;
+                    ProductQuantity = product.Quantity;
+                    AmountPerPackage = product.AmountPerPackage;
+                    Unit = product.Unit;
+                    Dosages = product.Dosages.Select(d => new DosageSchedule
                         {
                             Id = d.Id,
-                            PillId = d.PillId,
+                            ProductId = d.ProductId,
                             Time = d.Time,
                             Repetition = d.Repetition,
                             Frequency = d.Frequency,
@@ -231,23 +231,23 @@
                 }
                 else
                 {
-                    NavigationManager.NavigateTo("/pills");
+                    NavigationManager.NavigateTo("/products");
                 }
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading pill: {ex.Message}");
-            NavigationManager.NavigateTo("/pills");
+            Console.WriteLine($"Error loading product: {ex.Message}");
+            NavigationManager.NavigateTo("/products");
         }
     }
 
     private void AddNewDosageRow()
     {
-        Dosages.Add(new PillDosage
+        Dosages.Add(new DosageSchedule
             {
                 Id = _nextDosageId++, // Assign incremental ID
-                PillId = Id ?? 0, // Set PillId if we're editing an existing pill
+                ProductId = Id ?? 0, // Set ProductId if we're editing an existing product
                 Frequency = "Days",
                 SelectedDays = new List<string>(),
                 Repetition = 1,
@@ -256,7 +256,7 @@
         StateHasChanged();
     }
 
-    private void ToggleWeekday(PillDosage dosage, string day, bool isChecked)
+    private void ToggleWeekday(DosageSchedule dosage, string day, bool isChecked)
     {
         if (dosage.SelectedDays == null)
         {
@@ -277,64 +277,64 @@
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(PillName) || !Dosages.Any())
+            if (string.IsNullOrWhiteSpace(ProductName) || !Dosages.Any())
                 return;
 
             if (Id.HasValue)
             {
-                var existingPill = await PillService.GetPillAsync(Id.Value);
-                if (existingPill != null)
+                var existingProduct = await ProductService.GetProductAsync(Id.Value);
+                if (existingProduct != null)
                 {
-                    existingPill.Name = PillName;
-                    existingPill.Quantity = PillQuantity;
-                    existingPill.AmountPerPackage = AmountPerPackage;
-                    existingPill.Unit = Unit;
+                    existingProduct.Name = ProductName;
+                    existingProduct.Quantity = ProductQuantity;
+                    existingProduct.AmountPerPackage = AmountPerPackage;
+                    existingProduct.Unit = Unit;
 
-                    // Ensure all dosages have the correct PillId
+                    // Ensure all dosages have the correct ProductId
                     foreach (var dosage in Dosages)
                     {
-                        dosage.PillId = existingPill.Id;
+                        dosage.ProductId = existingProduct.Id;
                     }
 
-                    existingPill.Dosages = Dosages;
-                    await PillService.UpdatePillAsync(existingPill);
+                    existingProduct.Dosages = Dosages;
+                    await ProductService.UpdateProductAsync(existingProduct);
                 }
             }
             else
             {
-                var newPill = new Pill
+                var newProduct = new Product
                     {
-                        Name = PillName,
-                        Quantity = PillQuantity,
+                        Name = ProductName,
+                        Quantity = ProductQuantity,
                         AmountPerPackage = AmountPerPackage,
                         Unit = Unit,
-                        Dosages = new List<PillDosage>() // Initialize with empty list
+                        Dosages = new List<DosageSchedule>() // Initialize with empty list
                     };
 
-                // Add the pill first to get its ID
-                var savedPill = await PillService.AddPillAsync(newPill);
+                // Add the product first to get its ID
+                var savedProduct = await ProductService.AddProductAsync(newProduct);
 
-                // Update dosage IDs and PillId
+                // Update dosage IDs and ProductId
                 foreach (var dosage in Dosages)
                 {
-                    dosage.PillId = savedPill.Id;
+                    dosage.ProductId = savedProduct.Id;
                 }
 
-                // Update the pill with dosages
-                savedPill.Dosages = Dosages;
-                await PillService.UpdatePillAsync(savedPill);
+                // Update the product with dosages
+                savedProduct.Dosages = Dosages;
+                await ProductService.UpdateProductAsync(savedProduct);
             }
 
-            NavigationManager.NavigateTo("/pills");
+            NavigationManager.NavigateTo("/manage");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error saving pill: {ex.Message}");
+            Console.WriteLine($"Error saving product: {ex.Message}");
         }
     }
 
     private void Cancel()
     {
-        NavigationManager.NavigateTo("/pills");
+        NavigationManager.NavigateTo("/manage");
     }
 }

@@ -1,16 +1,16 @@
-﻿@page "/pills"
+﻿@page "/manage"
 @using MauiBlazorHybrid.Models
 @using MauiBlazorHybrid.Services
 @using Microsoft.JSInterop
-@inject IPillService PillService
+@inject IProductService ProductService
 @inject INotificationService NotificationService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JS
 @inherits MauiBlazorHybrid.Extensions.LocalizeComponent
 
-<h1>@L("Main_Tittle")</h1>
+<h1>@L("Manage_Tittle")</h1>
 
-<button class="add-pill-button" @onclick="NavigateToAddPill">@L("Add_New_Pill")</button>
+<button class="add-product-button" @onclick="NavigateToAddProduct">@L("Add_New_Product")</button>
 
 @if (!_permissionGranted)
 {
@@ -20,59 +20,91 @@
     </div>
 }
 
-@if (pills == null)
+@if (products == null)
 {
     <p>@L("Loading")</p>
 }
-else if (!pills.Any())
+else if (!products.Any())
 {
-    <p>@L("No_Pills_Added")</p>
+    <p>@L("No_Products_Added")</p>
 }
 else
 {
-    <div class="pills-list">
-        @foreach (var pill in pills)
+    <div class="products-list">
+        @foreach (var product in products)
         {
-            <div class="pill-card">
-                <div class="pill-header">
-                    <h2>@pill.Name</h2>
-                    <div class="pill-actions">
-                        <button class="edit-button" @onclick="() => NavigateToEdit(pill.Id)">
+            <div class="product-card">
+                <div class="product-header">
+                    <h2>@product.Name</h2>
+                    <div class="product-actions">
+                        <button class="edit-button" @onclick="() => NavigateToEdit(product.Id)">
                             @L("Edit")
                         </button>
-                        <button class="delete-button" @onclick="() => DeletePill(pill.Id)">
+                        <button class="delete-button" @onclick="() => DeleteProduct(product.Id)">
                             @L("Delete")
                         </button>
                     </div>
                 </div>
 
-                <div class="pill-info">
-                    <p>@L("Remaining"): @pill.Quantity</p>
+                <div class="product-info">
+                    <p>@L("Remaining"): @product.Quantity</p>
                 </div>
 
                 <div class="dosages-list">
-                    @if (pill.Dosages.Any())
+                    @if (product.Dosages.Any())
                     {
                         <h3>@L("Dosage_Schedule")</h3>
                         <ul>
-                            @foreach (var dosage in pill.Dosages)
+                            @foreach (var dosage in product.Dosages)
                             {
                                 <li class="dosage-item">
                                     <div>
                                         @if (dosage.Frequency == "Days")
                                         {
-                                            @($"{L("Take")} {dosage.AmountTaken} {(dosage.AmountTaken == 1 ? L("Pill_Single") : L("Pills_Plural"))} {L("Every")} {dosage.Repetition} {(dosage.Repetition == 1 ? L("Day_Single") : L("Days_Plural"))} {L("At")} {dosage.Time?.ToString("HH:mm")}")
+                                            string repetitionText;
+
+                                            if (dosage.Repetition == 1)
+                                                repetitionText = L("Repetition_Daily");
+                                            else if (dosage.Repetition == 2)
+                                                repetitionText = L("Repetition_EveryOtherDay");
+                                            else
+                                                repetitionText = string.Format(L("Repetition_EveryXDays"), dosage.Repetition);
+
+                                            <div>
+                                                @LF("DosageSchedule_Days_Format_Line1", new Dictionary<string, object>
+                            {
+                            { "amount", dosage.AmountTaken },
+                            { "unit", product.Unit },
+                            { "repetitionText", repetitionText }
+                            })
+                                                <br />
+                                                @LF("DosageSchedule_Days_Format_Line2", new Dictionary<string, object>
+                            {
+                            { "time", dosage.Time?.ToString("HH:mm") ?? "00:00" }
+                            })
+                                            </div>
                                         }
                                         else if (dosage.Frequency == "Weeks")
                                         {
+                                            string daysText = string.Join(", ", dosage.SelectedDays ?? new List<string>());
+
                                             <div>
-                                                @L("Take") @dosage.AmountTaken @(dosage.AmountTaken == 1 ? L("Pill_Single") : L("Pills_Plural")) @L("Weekly_On"):
-                                                @string.Join(", ", dosage.SelectedDays ?? new List<string>())
-                                                @L("At") @dosage.Time?.ToString("HH:mm")
+                                                @LF("DosageSchedule_Weeks_Format_Line1", new Dictionary<string, object>
+                            {
+                            { "amount", dosage.AmountTaken },
+                            { "unit", product.Unit }
+                            })
+                                                <br />
+                                                @LF("DosageSchedule_Weeks_Format_Line2", new Dictionary<string, object>
+                            {
+                            { "days", daysText },
+                            { "time", dosage.Time?.ToString("HH:mm") ?? "00:00" }
+                            })
                                             </div>
                                         }
+
                                     </div>
-                                    <button class="take-pill-button" @onclick="() => TakePillDose(pill.Id, dosage.AmountTaken)">@L("Take_Dose")</button>
+@*                                     <button class="take-product-button" @onclick="() => TakeProductDose(product.Id, dosage.AmountTaken)">@L("Take_Dose")</button> *@
                                 </li>
                             }
                         </ul>
@@ -88,14 +120,14 @@ else
 }
 
 <style>
-    .pills-list {
+    .products-list {
         display: flex;
         flex-direction: column;
         gap: 1rem;
         margin-top: 1rem;
     }
 
-    .pill-card {
+    .product-card {
         border: 1px solid #ddd;
         border-radius: 8px;
         padding: 1rem;
@@ -103,24 +135,24 @@ else
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
-    .pill-header {
+    .product-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 1rem;
     }
 
-        .pill-header h2 {
+        .product-header h2 {
             margin: 0;
             color: #333;
         }
 
-    .pill-actions {
+    .product-actions {
         display: flex;
         gap: 0.5rem;
     }
 
-    .pill-info {
+    .product-info {
         margin-bottom: 1rem;
         font-weight: bold;
     }
@@ -160,7 +192,7 @@ else
         color: white;
     }
 
-    .take-pill-button {
+    .take-product-button {
         padding: 0.5rem 0.75rem;
         background-color: #28a745;
         color: white;
@@ -171,7 +203,7 @@ else
         margin-left: 0.5rem;
     }
 
-    .add-pill-button {
+    .add-product-button {
         padding: 0.75rem 1.5rem;
         background-color: #28a745;
         color: white;
@@ -201,7 +233,7 @@ else
         margin-top: 0.5rem;
     }
 
-        .edit-button:hover, .delete-button:hover, .add-pill-button:hover, .permission-button:hover, .take-pill-button:hover {
+        .edit-button:hover, .delete-button:hover, .add-product-button:hover, .permission-button:hover, .take-product-button:hover {
             opacity: 0.9;
         }
 
@@ -214,18 +246,18 @@ else
 </style>
 
 @code {
-    private List<Pill>? pills;
+    private List<Product>? products;
     private bool _permissionGranted;
 
     protected override async Task OnInitializedAsync()
     {
         await CheckNotificationPermission();
-        await LoadPills();
+        await LoadProducts();
     }
 
-    private async Task LoadPills()
+    private async Task LoadProducts()
     {
-        pills = await PillService.GetPillsAsync();
+        products = await ProductService.GetProductsAsync();
     }
 
     private async Task CheckNotificationPermission()
@@ -240,29 +272,29 @@ else
         StateHasChanged();
     }
 
-    private void NavigateToAddPill()
+    private void NavigateToAddProduct()
     {
-        NavigationManager.NavigateTo("/addpill");
+        NavigationManager.NavigateTo("/addproduct");
     }
 
-    private void NavigateToEdit(int pillId)
+    private void NavigateToEdit(int productId)
     {
-        NavigationManager.NavigateTo($"/addpill/{pillId}");
+        NavigationManager.NavigateTo($"/addproduct/{productId}");
     }
 
-    private async Task DeletePill(int pillId)
+    private async Task DeleteProduct(int productId)
     {
-        var confirmed = await JS.InvokeAsync<bool>("confirm", L("Confirm_Delete_Pill"));
+        var confirmed = await JS.InvokeAsync<bool>("confirm", L("Confirm_Delete_Product"));
         if (confirmed)
         {
-            await PillService.DeletePillAsync(pillId);
-            await LoadPills();
+            await ProductService.DeleteProductAsync(productId);
+            await LoadProducts();
         }
     }
 
-    private async Task TakePillDose(int pillId, double amountTaken)
+    private async Task TakeProductDose(int productId, double amountTaken)
     {
-        var success = await PillService.TakePillDoseAsync(pillId, amountTaken);
+        var success = await ProductService.TakeProductDoseAsync(productId, amountTaken);
 
         if (success)
         {
@@ -273,8 +305,8 @@ else
 
         }
 
-        // Refresh the pill list to show updated quantities
-        await LoadPills();
+        // Refresh the product list to show updated quantities
+        await LoadProducts();
     }
 }
 
