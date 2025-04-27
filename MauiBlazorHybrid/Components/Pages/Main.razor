@@ -59,23 +59,23 @@ else
                             <div class="upcoming-doses-list">
                 @foreach (var dose in upcomingDoses.OrderBy(d => d.NextDoseTime).Take(5))
                 {
-                                            <div class="upcoming-dose-item @(IsRecentlyDue(dose.NextDoseTime) ? "recent_due" : "")">
-                                                <div class="dose-info">
-                                                    <span class="product-name">@dose.ProductName</span>
-                                                    <span class="dose-detail">@dose.AmountTaken @dose.Unit</span>
-                                                </div>
-                                                <div class="dose-time">
-                            @if (IsRecentlyDue(dose.NextDoseTime))
-                            {
-                                                                <span class="due-text">@L("Due_Now")</span>
-                            }
-                            else
-                            {
-                                                                <span>@FormatNextDoseTime(dose.NextDoseTime)</span>
-                            }
-                                                </div>
-                                                <button class="take-product-button" @onclick="() => TakeProductDoseFromDosage(dose.ProductId, dose.DosageId, dose.AmountTaken)">@L("Take_Dose")</button>
-                                            </div>
+                                                     <div class="upcoming-dose-item @(IsRecentlyDue(dose.NextDoseTime) ? "recent_due" : "")">
+                                                            <div class="dose-info">
+                                                                <span class="product-name">@dose.ProductName</span>
+                                                                <div class="dose-combined-info">
+                                                                    <span class="dose-detail">@dose.AmountTaken @dose.Unit</span>
+                                @if (IsRecentlyDue(dose.NextDoseTime))
+                                {
+                                                                                        <span class="due-text">@L("Due_Now")</span>
+                                }
+                                else
+                                {
+                                                                                        <span class="dose-time-info">@FormatNextDoseTime(dose.NextDoseTime)</span>
+                                }
+                                                                </div>
+                                                            </div>
+                                                            <button class="take-product-button" @onclick="() => TakeProductDoseFromDosage(dose.ProductId, dose.DosageId, dose.AmountTaken)">@L("Take_Dose")</button>
+                                                        </div>
                 }
                             </div>
         }
@@ -87,6 +87,17 @@ else
 }
 
 <style>
+       .dose-combined-info {
+       display: flex;
+       align-items: center;
+       gap: 0.5rem;
+   }
+
+      .dose-time-info {
+       font-size: 0.9rem;
+       color: #6c757d;
+   }
+
     .upcoming-doses, .missed-doses {
         margin-bottom: 2rem;
     }
@@ -129,6 +140,7 @@ else
     .product-name {
         font-weight: bold;
         font-size: 1.1rem;
+        white-space: nowrap;
     }
 
     .dose-detail {
@@ -186,7 +198,7 @@ else
     }
 
     .take-product-button {
-        padding: 0.5rem 0.75rem;
+        padding: 0.5rem 0.25rem;
         background-color: #28a745;
         color: white;
         border: none;
@@ -194,6 +206,7 @@ else
         cursor: pointer;
         font-weight: 500;
         margin-left: 0.5rem;
+        width: 90px;
     }
 
     .skip-product-button {
