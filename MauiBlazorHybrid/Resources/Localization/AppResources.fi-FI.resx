@@ -226,4 +226,13 @@
 	<data name="Add_Packet" xml:space="preserve">
 		<value>Lisää paketti</value>
 	</data>
+	<data name="Missed_Doses" xml:space="preserve">
+		<value>Ottamatta jääneet</value>
+	</data>
+	<data name="Take_Now" xml:space="preserve">
+		<value>Ota nyt</value>
+	</data>
+	<data name="Skip" xml:space="preserve">
+		<value>Ohita</value>
+	</data>
 </root>
