@@ -78,7 +78,7 @@ public class ProductService : IProductService
                 }
 
                 // Cancel existing notifications
-                await _notificationService.CancelPillNotificationsAsync(product.Id);
+                await _notificationService.CancelNotificationsAsync(product.Id);
 
                 _products[index] = product;
                 await SaveProductsAsync();
@@ -102,7 +102,7 @@ public class ProductService : IProductService
     public async Task DeleteProductAsync(int id)
     {
         // Cancel notifications before deleting
-        await _notificationService.CancelPillNotificationsAsync(id);
+        await _notificationService.CancelNotificationsAsync(id);
 
         _products.RemoveAll(p => p.Id == id);
         await SaveProductsAsync();
@@ -142,7 +142,7 @@ public class ProductService : IProductService
             // Reschedule notifications after taking a pill to update the next dose time
             if (dosageId.HasValue)
             {
-                await _notificationService.CancelPillNotificationsAsync(productId);
+                await _notificationService.CancelNotificationsAsync(productId);
                 await ScheduleNotificationsForProduct(product);
             }
 
@@ -198,7 +198,7 @@ public class ProductService : IProductService
             // Reschedule notifications if this was for a specific dosage
             if (history.DosageId.HasValue)
             {
-                await _notificationService.CancelPillNotificationsAsync(product.Id);
+                await _notificationService.CancelNotificationsAsync(product.Id);
                 await ScheduleNotificationsForProduct(product);
             }
         }
@@ -218,7 +218,7 @@ public class ProductService : IProductService
             DateTime nextDoseTime = CalculateNextDoseTime(dosage, lastTaken?.Timestamp);
 
             // Schedule notification for this next dose
-            await _notificationService.SchedulePillNotificationAsync(product, dosage, nextDoseTime);
+            await _notificationService.ScheduleNotificationAsync(product, dosage, nextDoseTime);
         }
     }
 
@@ -384,7 +384,7 @@ public class ProductService : IProductService
         try
         {
             // Cancel any existing notifications
-            await _notificationService.CancelPillNotificationsAsync(pill.Id);
+            await _notificationService.CancelNotificationsAsync(pill.Id);
             // Schedule new notifications
             await ScheduleNotificationsForProduct(pill);
         }

@@ -199,4 +199,28 @@
 	<data name="No_Products_Added" xml:space="preserve">
 		<value>Luo ensimmäinen tuote valitsemalla Lisää uusi!</value>
 	</data>
+	<data name="Time_To_Take" xml:space="preserve">
+		<value>Aika ottaa {productName}</value>
+	</data>
+	<data name="Take_Amount_Of" xml:space="preserve">
+		<value>Ota {amount} {unit}</value>
+	</data>
+	<data name="Reminders" xml:space="preserve">
+		<value>Muistutukset</value>
+	</data>
+	<data name="Reminders_Description" xml:space="preserve">
+		<value>Ajoitetut muistutukset tuotteille</value>
+	</data>
+	<data name="Reminder" xml:space="preserve">
+		<value>Muistutus</value>
+	</data>
+	<data name="Time_To_Take" xml:space="preserve">
+		<value>Aika ottaa tuote</value>
+	</data>
+	<data name="Reminder_Scheduled_For" xml:space="preserve">
+		<value>Muistutus tuotteelle {productName} ajoitettu kello {scheduledTime}</value>
+	</data>
+	<data name="Enable_Alarm_Permission" xml:space="preserve">
+		<value>Salli tarkat hälytykset sovellukselle asetuksissa</value>
+	</data>
 </root>

@@ -55,8 +55,8 @@ namespace MauiBlazorHybrid.Services
             return _localizationService.GetString(key);
         }
 
-        // Helper method to get localized text with formatting
-        private string LF(string key, params object[] args)
+        // Helper method to get localized text with formatting using named parameters
+        private string LF(string key, Dictionary<string, object> parameters)
         {
             // Make sure we're initialized before trying to use the localization service
             if (!_initialized)
@@ -64,7 +64,7 @@ namespace MauiBlazorHybrid.Services
                 // Return a placeholder until we're ready to display real messages
                 return key;
             }
-            return _localizationService.GetString(key, args);
+            return _localizationService.Format(key, parameters);
         }
 
         public async Task<bool> RequestPermissionAsync()
@@ -116,17 +116,17 @@ namespace MauiBlazorHybrid.Services
                 permissionGranted = false;
             }
 #else
-                    // Default for other platforms
-                    permissionGranted = true;
+                        // Default for other platforms
+                        permissionGranted = true;
 #endif
 
             return permissionGranted;
         }
 
-        public async Task SchedulePillNotificationAsync(Product pill, DosageSchedule dosage)
+        public async Task ScheduleNotificationAsync(Product product, DosageSchedule dosage)
         {
             // Find the most recent history entry for this dosage
-            var lastTaken = pill.History
+            var lastTaken = product.History
                 ?.Where(h => h.DosageId == dosage.Id)
                 .OrderByDescending(h => h.Timestamp)
                 .FirstOrDefault();
@@ -135,16 +135,21 @@ namespace MauiBlazorHybrid.Services
             DateTime nextDoseTime = CalculateNextDoseTime(dosage, lastTaken?.Timestamp);
 
             // Schedule notification for the next dose
-            await ScheduleNotification(pill, dosage, nextDoseTime, 0); // No auto-repeat, we'll manually schedule
+            await ScheduleNotification(product, dosage, nextDoseTime, 0); // No auto-repeat, we'll manually schedule
 
-            // Show a confirmation toast with localized text
-            var toast = Toast.Make(LF("Reminder_Scheduled_For", pill.Name, nextDoseTime.ToString("g")), ToastDuration.Short);
+            // Show a confirmation toast with localized text using named parameters
+            var reminderParams = new Dictionary<string, object>
+                {
+                    { "productName", product.Name },
+                    { "scheduledTime", nextDoseTime.ToString("g") }
+                };
+            var toast = Toast.Make(LF("Reminder_Scheduled_For", reminderParams), ToastDuration.Short);
             await toast.Show();
         }
 
-        public async Task SchedulePillNotificationAsync(Product pill, DosageSchedule dosage, DateTime nextDoseTime)
+        public async Task ScheduleNotificationAsync(Product product, DosageSchedule dosage, DateTime nextDoseTime)
         {
-            await ScheduleNotification(pill, dosage, nextDoseTime, 0); // No auto-repeat, we'll manually schedule
+            await ScheduleNotification(product, dosage, nextDoseTime, 0); // No auto-repeat, we'll manually schedule
         }
 
         private DateTime CalculateNextDoseTime(DosageSchedule dosage, DateTime? lastTakenTime)
@@ -164,7 +169,7 @@ namespace MauiBlazorHybrid.Services
                 dosageTimeOfDay.Minute,
                 0);
 
-            // If we've never taken this pill before or no dosage ID was recorded
+            // If we've never taken this product before or no dosage ID was recorded
             if (lastTakenTime == null)
             {
                 // If today's dose time is already past, schedule for next occurrence
@@ -185,7 +190,7 @@ namespace MauiBlazorHybrid.Services
             }
             else
             {
-                // We have a record of when this pill was last taken
+                // We have a record of when this product was last taken
                 DateTime lastTaken = lastTakenTime.Value;
 
                 // Calculate the next dose based on frequency and repetition
@@ -289,23 +294,31 @@ namespace MauiBlazorHybrid.Services
             return startDate.AddDays(daysToAdd);
         }
 
-        private async Task ScheduleNotification(Product pill, DosageSchedule dosage, DateTime scheduleTime, int repeatDays)
+        private async Task ScheduleNotification(Product product, DosageSchedule dosage, DateTime scheduleTime, int repeatDays)
         {
             try
             {
                 await _semaphore.WaitAsync();
 
-                var notificationId = GenerateNotificationId(pill.Id, dosage.Id);
+                var notificationId = GenerateNotificationId(product.Id, dosage.Id);
 
-                // Remove any existing notifications for this pill/dosage
+                // Remove any existing notifications for this product/dosage
                 _scheduledNotifications.RemoveAll(n => n.NotificationId == notificationId);
 
-                // Create localized notification message using L and LF
-                string title = LF("Time_To_Take", pill.Name);
-                string message = LF("Take_Amount_Of",
-                                 dosage.AmountTaken.ToString(),
-                                 dosage.AmountTaken == 1 ? L("Unit_Single") : L("Unit_Plural"),
-                                 pill.Name);
+                // Create localized notification message using LF with named parameters
+                var titleParams = new Dictionary<string, object>
+                    {
+                        { "productName", product.Name }
+                    };
+                string title = LF("Time_To_Take", titleParams);
+
+                var messageParams = new Dictionary<string, object>
+                    {
+                        { "amount", dosage.AmountTaken.ToString() },
+                        { "unit", dosage.AmountTaken == 1 ? L("Unit_Single") : L("Unit_Plural") },
+                        { "productName", product.Name }
+                    };
+                string message = LF("Take_Amount_Of", messageParams);
 
                 // Add the new notification with localized text
                 _scheduledNotifications.Add(new ScheduledNotification
@@ -315,13 +328,13 @@ namespace MauiBlazorHybrid.Services
                     Title = title,
                     Message = message,
                     RepeatDays = repeatDays,
-                    PillId = pill.Id,
+                    Id = product.Id,
                     DosageId = dosage.Id
                 });
 
 #if ANDROID
                 // Also schedule system alarm for reliable background notifications
-                ScheduleAndroidAlarm(pill, dosage, scheduleTime, notificationId, title, message);
+                ScheduleAndroidAlarm(product, dosage, scheduleTime, notificationId, title, message);
 #endif
             }
             finally
@@ -331,7 +344,7 @@ namespace MauiBlazorHybrid.Services
         }
 
 #if ANDROID
-        private void ScheduleAndroidAlarm(Product pill, DosageSchedule dosage, DateTime scheduleTime, int notificationId, string title, string message)
+        private void ScheduleAndroidAlarm(Product product, DosageSchedule dosage, DateTime scheduleTime, int notificationId, string title, string message)
         {
             try
             {
@@ -347,10 +360,10 @@ namespace MauiBlazorHybrid.Services
                 intent.PutExtra("message", message);
 
                 // Also pass localized strings for channel and fallbacks
-                intent.PutExtra("channelName", L("Pill_Reminders"));
-                intent.PutExtra("channelDesc", L("Medication_Reminders_Description"));
-                intent.PutExtra("fallbackTitle", L("Medication_Reminder"));
-                intent.PutExtra("fallbackMessage", L("Time_To_Take_Medication"));
+                intent.PutExtra("channelName", L("Reminders"));
+                intent.PutExtra("channelDesc", L("Reminders_Description"));
+                intent.PutExtra("fallbackTitle", L("Reminder"));
+                intent.PutExtra("fallbackMessage", L("Time_To_Take"));
 
                 // Create unique pending intent
                 PendingIntentFlags flags = PendingIntentFlags.UpdateCurrent;
@@ -389,7 +402,7 @@ namespace MauiBlazorHybrid.Services
                         alarmManager.SetExact(AlarmType.RtcWakeup, triggerAtMillis, pendingIntent);
                     }
 
-                    Console.WriteLine($"Scheduled Android alarm for {pill.Name} at {scheduleTime}");
+                    Console.WriteLine($"Scheduled Android alarm for {product.Name} at {scheduleTime}");
                 }
             }
             catch (System.Exception ex)
@@ -431,7 +444,7 @@ namespace MauiBlazorHybrid.Services
         }
 #endif
 
-        public async Task CancelPillNotificationsAsync(int pillId)
+        public async Task CancelNotificationsAsync(int productId)
         {
             try
             {
@@ -439,12 +452,12 @@ namespace MauiBlazorHybrid.Services
 
                 // Get notification IDs before removing
                 var notificationIds = _scheduledNotifications
-                    .Where(n => n.PillId == pillId)
+                    .Where(n => n.Id == productId)
                     .Select(n => n.NotificationId)
                     .ToList();
 
                 // Remove from internal list
-                _scheduledNotifications.RemoveAll(n => n.PillId == pillId);
+                _scheduledNotifications.RemoveAll(n => n.Id == productId);
 
 #if ANDROID
                 // Also cancel Android alarms
@@ -460,9 +473,9 @@ namespace MauiBlazorHybrid.Services
             }
         }
 
-        private int GenerateNotificationId(int pillId, int dosageId)
+        private int GenerateNotificationId(int productId, int dosageId)
         {
-            return pillId * 1000 + dosageId;
+            return productId * 1000 + dosageId;
         }
 
         private DayOfWeek ParseWeekDay(string day) => day switch
@@ -544,8 +557,8 @@ namespace MauiBlazorHybrid.Services
 #if ANDROID
             // Android system notification implementation
             var context = Android.App.Application.Context;
-            var channelId = "pill_reminders";
-            var channelName = L("Pill_Reminders"); // Localized channel name using L
+            var channelId = "product_reminders";
+            var channelName = L("Reminders"); // Localized channel name using L
 
             // Get the notification manager
             var notificationManager = context.GetSystemService(Android.Content.Context.NotificationService) as Android.App.NotificationManager;
@@ -555,7 +568,7 @@ namespace MauiBlazorHybrid.Services
             {
                 var channel = new Android.App.NotificationChannel(channelId, channelName, Android.App.NotificationImportance.High)
                 {
-                    Description = L("Medication_Reminders_Description") // Localized description using L
+                    Description = L("Reminders_Description") // Localized description using L
                 };
                 channel.EnableVibration(true);
                 notificationManager.CreateNotificationChannel(channel);
@@ -641,8 +654,8 @@ namespace MauiBlazorHybrid.Services
                 Console.WriteLine($"Failed to show notification: {ex.Message}");
             }
 #else
-                    // For non-Android platforms, just do nothing
-                    await Task.CompletedTask;
+                        // For non-Android platforms, just do nothing
+                        await Task.CompletedTask;
 #endif
         }
 
@@ -653,7 +666,7 @@ namespace MauiBlazorHybrid.Services
             public string Title { get; set; } = string.Empty;
             public string Message { get; set; } = string.Empty;
             public int RepeatDays { get; set; }
-            public int PillId { get; set; }
+            public int Id { get; set; }
             public int DosageId { get; set; }
         }
     }
@@ -693,7 +706,7 @@ namespace MauiBlazorHybrid.Services
                 string channelDesc = intent.GetStringExtra("channelDesc");
 
                 // Create notification channel
-                string channelId = "pill_reminders";
+                string channelId = "product_reminders";
                 if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.O)
                 {
                     var notificationManager = context.GetSystemService(Context.NotificationService) as NotificationManager;

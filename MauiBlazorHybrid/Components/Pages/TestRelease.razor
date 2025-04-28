@@ -1,0 +1,88 @@
+﻿@page "/testrelease"
+@inject NavigationManager NavigationManager
+@inject IVersionService VersionService
+
+<div class="test-release-container">
+    <h2>Test Release Information</h2>
+
+    <div class="text-block">
+        <h3>Welcome to Test Release @VersionService.GetCurrentVersion()</h3>
+        <p>This is a sample page containing non-localized static text. This page is used for testing purposes only.</p>
+    </div>
+
+    <div class="text-block">
+        <h3>About This Test</h3>
+        <p>This test release page demonstrates how to create a simple Blazor page with static content and basic navigation.</p>
+        <p>You can add any number of text blocks to this page without worrying about localization.</p>
+    </div>
+
+    <div class="text-block">
+        <h3>Testing Instructions</h3>
+        <p>Use this page to verify the following:</p>
+        <ul>
+            <li>Static text rendering</li>
+            <li>Page layout and styling</li>
+            <li>Button functionality</li>
+            <li>Navigation back to the main page</li>
+        </ul>
+    </div>
+
+    <div class="button-container">
+        <button class="ok-button" @onclick="NavigateToMain">OK</button>
+    </div>
+</div>
+
+<style>
+    .test-release-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 1rem;
+    }
+
+    .text-block {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid #17a2b8;
+    }
+
+        .text-block h3 {
+            margin-top: 0;
+            color: #212529;
+        }
+
+    .button-container {
+        display: flex;
+        justify-content: center;
+        margin-top: 2rem;
+    }
+
+    .ok-button {
+        padding: 0.75rem 2rem;
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 500;
+        font-size: 1.1rem;
+    }
+
+        .ok-button:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+            transition: all 0.2s ease;
+        }
+</style>
+
+@code {
+    private void NavigateToMain()
+    {
+        // Mark that we've seen the update
+        VersionService.MarkUpdateSeen();
+
+        // Navigate back to the main page
+        NavigationManager.NavigateTo("/");
+    }
+}
