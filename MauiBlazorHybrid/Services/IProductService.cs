@@ -12,6 +12,7 @@ public interface IProductService
     Task DeleteProductAsync(int id);
     Task<bool> TakeProductDoseAsync(int productId, double amount);
     Task<bool> TakeProductDoseAsync(int productId, double amount, int? dosageId);
+    Task<bool> AddPacketAsync(int productId, double amountToAdd);
     Task<List<UsageHistory>> GetProductHistoryAsync(int productId);
     Task<List<UsageHistory>> GetAllProductHistoryAsync();
     Task AddProductHistoryManuallyAsync(UsageHistory history);

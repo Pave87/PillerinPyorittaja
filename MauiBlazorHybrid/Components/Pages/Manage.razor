@@ -35,8 +35,80 @@ else
         {
             <div class="product-card">
                 <div class="product-header">
-                    <h2>@product.Name</h2>
+                    <div class="product-info-container">
+                        <h2>@product.Name</h2>
+                        <div class="product-info">
+                            <p>@L("Remaining"): @product.Quantity</p>
+                        </div>
+                        <div class="dosages-list">
+                            @if (product.Dosages.Any())
+                            {
+                                <h3>@L("Dosage_Schedule")</h3>
+                                <ul>
+                                    @foreach (var dosage in product.Dosages)
+                                    {
+                                        <li class="dosage-item">
+                                            <div>
+                                                @if (dosage.Frequency == "Days")
+                                                {
+                                                    string repetitionText;
+
+                                                    if (dosage.Repetition == 1)
+                                                        repetitionText = L("Repetition_Daily");
+                                                    else if (dosage.Repetition == 2)
+                                                        repetitionText = L("Repetition_EveryOtherDay");
+                                                    else
+                                                        repetitionText = string.Format(L("Repetition_EveryXDays"), dosage.Repetition);
+
+                                                    <div>
+                                                        @LF("DosageSchedule_Days_Format_Line1", new Dictionary<string, object>
+                                    {
+                                    { "amount", dosage.AmountTaken },
+                                    { "unit", product.Unit },
+                                    { "repetitionText", repetitionText }
+                                    })
+                                                        <br />
+                                                        @LF("DosageSchedule_Days_Format_Line2", new Dictionary<string, object>
+                                    {
+                                    { "time", dosage.Time?.ToString("HH:mm") ?? "00:00" }
+                                    })
+                                                    </div>
+                                                }
+                                                else if (dosage.Frequency == "Weeks")
+                                                {
+                                                    string daysText = string.Join(", ", dosage.SelectedDays ?? new List<string>());
+
+                                                    <div>
+                                                        @LF("DosageSchedule_Weeks_Format_Line1", new Dictionary<string, object>
+                                    {
+                                    { "amount", dosage.AmountTaken },
+                                    { "unit", product.Unit }
+                                    })
+                                                        <br />
+                                                        @LF("DosageSchedule_Weeks_Format_Line2", new Dictionary<string, object>
+                                    {
+                                    { "days", daysText },
+                                    { "time", dosage.Time?.ToString("HH:mm") ?? "00:00" }
+                                    })
+                                                    </div>
+                                                }
+
+                                            </div>
+                                            @*                                     <button class="take-product-button" @onclick="() => TakeProductDose(product.Id, dosage.AmountTaken)">@L("Take_Dose")</button> *@
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <p>@L("No_Dosages_Scheduled")</p>
+                            }
+                        </div>
+                    </div>
                     <div class="product-actions">
+                        <button class="add-packet-button" @onclick="() => AddPacket(product.Id)">
+                            @L("Add_Packet")
+                        </button>
                         <button class="edit-button" @onclick="() => NavigateToEdit(product.Id)">
                             @L("Edit")
                         </button>
@@ -44,75 +116,6 @@ else
                             @L("Delete")
                         </button>
                     </div>
-                </div>
-
-                <div class="product-info">
-                    <p>@L("Remaining"): @product.Quantity</p>
-                </div>
-
-                <div class="dosages-list">
-                    @if (product.Dosages.Any())
-                    {
-                        <h3>@L("Dosage_Schedule")</h3>
-                        <ul>
-                            @foreach (var dosage in product.Dosages)
-                            {
-                                <li class="dosage-item">
-                                    <div>
-                                        @if (dosage.Frequency == "Days")
-                                        {
-                                            string repetitionText;
-
-                                            if (dosage.Repetition == 1)
-                                                repetitionText = L("Repetition_Daily");
-                                            else if (dosage.Repetition == 2)
-                                                repetitionText = L("Repetition_EveryOtherDay");
-                                            else
-                                                repetitionText = string.Format(L("Repetition_EveryXDays"), dosage.Repetition);
-
-                                            <div>
-                                                @LF("DosageSchedule_Days_Format_Line1", new Dictionary<string, object>
-                            {
-                            { "amount", dosage.AmountTaken },
-                            { "unit", product.Unit },
-                            { "repetitionText", repetitionText }
-                            })
-                                                <br />
-                                                @LF("DosageSchedule_Days_Format_Line2", new Dictionary<string, object>
-                            {
-                            { "time", dosage.Time?.ToString("HH:mm") ?? "00:00" }
-                            })
-                                            </div>
-                                        }
-                                        else if (dosage.Frequency == "Weeks")
-                                        {
-                                            string daysText = string.Join(", ", dosage.SelectedDays ?? new List<string>());
-
-                                            <div>
-                                                @LF("DosageSchedule_Weeks_Format_Line1", new Dictionary<string, object>
-                            {
-                            { "amount", dosage.AmountTaken },
-                            { "unit", product.Unit }
-                            })
-                                                <br />
-                                                @LF("DosageSchedule_Weeks_Format_Line2", new Dictionary<string, object>
-                            {
-                            { "days", daysText },
-                            { "time", dosage.Time?.ToString("HH:mm") ?? "00:00" }
-                            })
-                                            </div>
-                                        }
-
-                                    </div>
-@*                                     <button class="take-product-button" @onclick="() => TakeProductDose(product.Id, dosage.AmountTaken)">@L("Take_Dose")</button> *@
-                                </li>
-                            }
-                        </ul>
-                    }
-                    else
-                    {
-                        <p>@L("No_Dosages_Scheduled")</p>
-                    }
                 </div>
             </div>
         }
@@ -138,18 +141,25 @@ else
     .product-header {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1rem;
+        width: 100%;
     }
 
-        .product-header h2 {
-            margin: 0;
-            color: #333;
-        }
+    .product-info-container {
+        flex: 1;
+        margin-right: 1rem;
+    }
+
+    .product-header h2 {
+        margin: 0;
+        margin-bottom: 0.5rem;
+        color: #333;
+    }
 
     .product-actions {
         display: flex;
+        flex-direction: column;
         gap: 0.5rem;
+        min-width: 120px;
     }
 
     .product-info {
@@ -158,7 +168,7 @@ else
     }
 
     .dosages-list {
-        margin-left: 1rem;
+        margin-bottom: 1rem;
     }
 
         .dosages-list ul {
@@ -174,12 +184,18 @@ else
             align-items: center;
         }
 
-    .edit-button, .delete-button {
+    .edit-button, .delete-button, .add-packet-button {
         padding: 0.5rem 1rem;
         border: none;
         border-radius: 4px;
         cursor: pointer;
         font-weight: 500;
+        width: 100%;
+    }
+
+    .add-packet-button {
+        background-color: #28a745;
+        color: white;
     }
 
     .edit-button {
@@ -233,7 +249,7 @@ else
         margin-top: 0.5rem;
     }
 
-        .edit-button:hover, .delete-button:hover, .add-product-button:hover, .permission-button:hover, .take-product-button:hover {
+        .edit-button:hover, .delete-button:hover, .add-product-button:hover, .permission-button:hover, .take-product-button:hover, .add-packet-button:hover {
             opacity: 0.9;
         }
 
@@ -292,6 +308,18 @@ else
         }
     }
 
+    private async Task AddPacket(int productId)
+    {
+        // Find the product in the list
+        var product = products?.FirstOrDefault(p => p.Id == productId);
+        if (product != null)
+        {
+            // Add the amount per package to the quantity
+            await ProductService.AddPacketAsync(productId, product.AmountPerPackage);
+            await LoadProducts();
+        }
+    }
+
     private async Task TakeProductDose(int productId, double amountTaken)
     {
         var success = await ProductService.TakeProductDoseAsync(productId, amountTaken);
@@ -309,4 +337,3 @@ else
         await LoadProducts();
     }
 }
-

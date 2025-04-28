@@ -16,6 +16,30 @@ public class ProductService : IProductService
         LoadProducts();
     }
 
+    public async Task<bool> AddPacketAsync(int productId, double amountToAdd)
+    {
+        try
+        {
+            // Get the current product
+            var product = await GetProductAsync(productId);
+            if (product == null)
+                return false;
+
+            // Add the amount to the product quantity
+            product.Quantity += amountToAdd;
+
+            // Update the product in storage
+            await UpdateProductAsync(product);
+
+
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private void LoadProducts()
     {
         if (File.Exists(_filePath))

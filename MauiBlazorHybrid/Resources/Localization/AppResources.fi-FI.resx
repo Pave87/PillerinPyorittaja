@@ -223,4 +223,7 @@
 	<data name="Enable_Alarm_Permission" xml:space="preserve">
 		<value>Salli tarkat hälytykset sovellukselle asetuksissa</value>
 	</data>
+	<data name="Add_Packet" xml:space="preserve">
+		<value>Lisää paketti</value>
+	</data>
 </root>
