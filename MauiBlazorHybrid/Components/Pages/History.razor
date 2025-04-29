@@ -1,0 +1,298 @@
+﻿@page "/history"
+@using MauiBlazorHybrid.Models
+@using MauiBlazorHybrid.Services
+@inject IProductService ProductService
+@inherits MauiBlazorHybrid.Extensions.LocalizeComponent
+
+<h3>@L("History")</h3>
+
+<div class="filter-container">
+    <div class="filter-group">
+        <label for="productFilter">@L("Product"):</label>
+        <select id="productFilter" class="filter-select" @bind="selectedProductId">
+            <option value="0">@L("All_Products")</option>
+            @foreach (var product in products)
+            {
+                <option value="@product.Id">@product.Name</option>
+            }
+        </select>
+    </div>
+
+    @if (selectedProductId > 0 && selectedProduct != null)
+    {
+        <div class="filter-group">
+            <label for="dosageFilter">@L("Dosage"):</label>
+            <select id="dosageFilter" class="filter-select" @bind="selectedDosageId">
+                <option value="0">@L("All_Dosages")</option>
+                @foreach (var dosage in selectedProduct.Dosages)
+                {
+                    <option value="@dosage.Id">@FormatDosageInfo(dosage)</option>
+                }
+            </select>
+        </div>
+    }
+
+    <button class="filter-button" @onclick="ApplyFilters">@L("Apply_Filters")</button>
+</div>
+
+@if (filteredHistory == null)
+{
+    <p>@L("Loading")</p>
+}
+else if (!filteredHistory.Any())
+{
+    <p>@L("No_History_Found")</p>
+}
+else
+{
+    <div class="history-list">
+        @foreach (var historyItem in filteredHistory)
+        {
+            <div class="history-item">
+                <div class="history-product">
+                    <span class="product-name">@GetProductName(historyItem.ProductId)</span>
+                    <span class="history-amount">@historyItem.AmountTaken @GetProductUnit(historyItem.ProductId)</span>
+                </div>
+                <div class="history-time">
+                    <span class="history-date">@historyItem.Timestamp.ToString("d MMM yyyy")</span>
+                    <span class="history-time-value">@historyItem.Timestamp.ToString("HH:mm")</span>
+                </div>
+                <div class="history-event">
+                    <span class="event-type @GetEventTypeClass(historyItem.Event)">@FormatEventType(historyItem.Event)</span>
+                </div>
+            </div>
+        }
+    </div>
+
+
+<style>
+    .filter-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 8px;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        min-width: 200px;
+    }
+
+    .filter-select {
+        padding: 0.5rem;
+        border-radius: 4px;
+        border: 1px solid #ced4da;
+        margin-top: 0.25rem;
+    }
+
+    .filter-button {
+        padding: 0.5rem 1rem;
+        background-color: #0d6efd;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        align-self: flex-end;
+        margin-top: auto;
+    }
+
+    .history-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .history-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #17a2b8;
+    }
+
+    .history-product {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .product-name {
+        font-weight: bold;
+        font-size: 1.1rem;
+    }
+
+    .history-amount {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+
+    .history-time {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .history-date {
+        font-size: 0.9rem;
+    }
+
+    .history-time-value {
+        font-weight: 500;
+    }
+
+    .history-event {
+        min-width: 80px;
+        text-align: center;
+    }
+
+    .event-type {
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+
+    .event-usage {
+        background-color: #d1e7dd;
+        color: #146c43;
+    }
+
+    .event-refilled {
+        background-color: #cfe2ff;
+        color: #0a58ca;
+    }
+
+    .event-created {
+        background-color: #e2e3e5;
+        color: #495057;
+    }
+
+    .event-modified {
+        background-color: #fff3cd;
+        color: #997404;
+    }
+
+    .event-removed {
+        background-color: #f8d7da;
+        color: #b02a37;
+    }
+
+    .event-skipped {
+        background-color: #e2e3e5;
+        color: #495057;
+    }
+
+</style>
+
+@code {
+    private List<Product> products = new();
+    private List<UsageHistory> allHistory = new();
+    private List<UsageHistory> filteredHistory = new();
+    private int selectedProductId = 0; // 0 means "All Products"
+    private int selectedDosageId = 0; // 0 means "All Dosages" for the selected product
+    private Product? selectedProduct = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+        await ApplyFilters();
+    }
+
+    private async Task LoadData()
+    {
+        products = await ProductService.GetProductsAsync();
+        allHistory = await ProductService.GetAllProductHistoryAsync();
+    }
+
+    private async Task ApplyFilters()
+    {
+        // Update selectedProduct if productId changed
+        if (selectedProductId > 0)
+        {
+            selectedProduct = products.FirstOrDefault(p => p.Id == selectedProductId);
+        }
+        else
+        {
+            selectedProduct = null;
+            selectedDosageId = 0; // Reset dosage filter when "All Products" is selected
+        }
+
+        // Apply filters
+        if (selectedProductId > 0)
+        {
+            if (selectedDosageId > 0)
+            {
+                // Filter by both product and specific dosage
+                filteredHistory = allHistory
+                    .Where(h => h.ProductId == selectedProductId && h.DosageId == selectedDosageId)
+                    .OrderByDescending(h => h.Timestamp)
+                    .ToList();
+            }
+            else
+            {
+                // Filter by product only
+                filteredHistory = allHistory
+                    .Where(h => h.ProductId == selectedProductId)
+                    .OrderByDescending(h => h.Timestamp)
+                    .ToList();
+            }
+        }
+        else
+        {
+            // No filters - show all history
+            filteredHistory = allHistory.OrderByDescending(h => h.Timestamp).ToList();
+        }
+    }
+
+    private string GetProductName(int productId)
+    {
+        return products.FirstOrDefault(p => p.Id == productId)?.Name ?? $"Product {productId}";
+    }
+
+    private string GetProductUnit(int productId)
+    {
+        return products.FirstOrDefault(p => p.Id == productId)?.Unit ?? "";
+    }
+
+    private string FormatDosageInfo(DosageSchedule dosage)
+    {
+        string timeInfo = dosage.Time?.ToString("HH:mm") ?? "--:--";
+        
+        if (dosage.Frequency == "Days")
+        {
+            return $"{timeInfo}, every {dosage.Repetition} day(s)";
+        }
+        else if (dosage.Frequency == "Weeks" && dosage.SelectedDays?.Any() == true)
+        {
+            string days = string.Join(", ", dosage.SelectedDays);
+            return $"{timeInfo}, {days}, every {dosage.Repetition} week(s)";
+        }
+        
+        return $"{timeInfo}";
+    }
+
+    private string FormatEventType(EventType eventType)
+    {
+        return eventType switch
+        {
+            EventType.Taken => L("Taken"),
+            EventType.Refilled => L("Refilled"),
+            EventType.Created => L("Created"),
+            EventType.Modified => L("Modified"),
+            EventType.Removed => L("Removed"),
+            EventType.Skipped => L("Skipped"),
+            _ => eventType.ToString()
+        };
+    }
+
+    private string GetEventTypeClass(EventType eventType)
+    {
+        return $"event-{eventType.ToString().ToLower()}";
+    }
+}
+}

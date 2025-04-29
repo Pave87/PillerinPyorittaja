@@ -2,101 +2,132 @@
 @using MauiBlazorHybrid.Models
 @using MauiBlazorHybrid.Services
 @using Microsoft.JSInterop
+@using CommunityToolkit.Maui.Alerts
+@using CommunityToolkit.Maui.Core
+@using CommunityToolkit.Maui.Views
 @inject IProductService ProductService
 @inject INotificationService NotificationService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JS
 @inherits MauiBlazorHybrid.Extensions.LocalizeComponent
 
+@if (showConfirmationPopup)
+{
+    <div class="in-page-popup @(isConfirmationPopupVisible ? "popup-visible" : "")">
+        <div class="popup-header">
+            <span class="popup-title">@L("Early_Dose_Confirmation")</span>
+            <button class="popup-close" @onclick="HideConfirmationPopup">×</button>
+        </div>
+        <div class="popup-body">
+            <p>
+                @LF("Early_Dose_Message", new Dictionary<string, object> {
+            { "productName", pendingConfirmation.ProductName },
+            { "scheduledTime", FormatNextDoseTime(pendingConfirmation.NextDoseTime) }
+            })
+            </p>
+            <div class="popup-actions">
+                <button class="popup-button-no" @onclick="HideConfirmationPopup">@L("No")</button>
+                <button class="popup-button-yes" @onclick="ConfirmTakeDose">@L("Yes")</button>
+            </div>
+        </div>
+    </div>
+}
+
 @if (!_permissionGranted)
 {
-            <div class="alert alert-warning">
-                <p>@L("Notifications_Not_Enabled")</p>
-                <button class="permission-button" @onclick="RequestNotificationPermission">@L("Enable_Notifications")</button>
-            </div>
+    <div class="alert alert-warning">
+        <p>@L("Notifications_Not_Enabled")</p>
+        <button class="permission-button" @onclick="RequestNotificationPermission">@L("Enable_Notifications")</button>
+    </div>
 }
 
 @if (products == null)
 {
-            <p>@L("Loading")</p>
+    <p>@L("Loading")</p>
 }
 else if (!products.Any())
 {
-            <p>@L("No_Products_Added")</p>
-            <button class="add-product-button" @onclick="NavigateToAddProduct">@L("Add_New_Product")</button>
+    <p>@L("No_Products_Added")</p>
+    <button class="add-product-button" @onclick="NavigateToAddProduct">@L("Add_New_Product")</button>
 }
 else
 {
-    @if (missedDoses.Any())
+    @if (missedDosages.Any())
     {
-                        <div class="missed-doses">
-                            <h2>@L("Missed_Doses")</h2>
-                            <div class="missed-doses-list">
-                @foreach (var dose in missedDoses.OrderBy(d => d.ScheduledTime).Take(5))
+        <div class="missed-doses">
+            <h2>@L("Missed_Doses")</h2>
+            <div class="missed-doses-list">
+                @foreach (var missedDosage in missedDosages.OrderBy(d => d.ScheduledTime).Take(5))
                 {
-                                            <div class="missed-dose-item">
-                                                <div class="dose-info">
-                                                    <span class="product-name">@dose.ProductName</span>
-                                                    <span class="dose-detail">@dose.AmountTaken @dose.Unit</span>
-                                                </div>
-                                                <div class="dose-time">
-                                                    <span class="missed-text">@FormatMissedDoseTime(dose.ScheduledTime)</span>
-                                                </div>
-                                                <div class="dose-actions">
-                                                    <button class="take-product-button" @onclick="() => TakeProductDoseFromDosage(dose.ProductId, dose.DosageId, dose.AmountTaken)">@L("Take_Now")</button>
-                                                    <button class="skip-product-button" @onclick="() => SkipMissedDose(dose)">@L("Skip")</button>
-                                                </div>
-                                            </div>
-                }
+                    var product = products.FirstOrDefault(p => p.Id == missedDosage.ProductId);
+                    var dosage = product?.Dosages.FirstOrDefault(d => d.Id == missedDosage.DosageId);
+
+                    if (product != null && dosage != null)
+                    {
+                        <div class="missed-dose-item">
+                            <div class="dose-info">
+                                <span class="product-name">@product.Name</span>
+                                <span class="dose-detail">@dosage.AmountTaken @product.Unit</span>
+                            </div>
+                            <div class="dose-time">
+                                <span class="missed-text">@FormatMissedDoseTime(missedDosage.ScheduledTime)</span>
+                            </div>
+                            <div class="dose-actions">
+                                <button class="take-product-button" @onclick="() => TakeMissedDosage(product.Id, dosage.Id, missedDosage.Id, dosage.AmountTaken)">@L("Take_Now")</button>
+                                <button class="skip-product-button" @onclick="() => SkipMissedDosage(product.Id, missedDosage.Id)">@L("Skip")</button>
                             </div>
                         </div>
+                    }
+                }
+            </div>
+        </div>
     }
 
-            <div class="upcoming-doses">
-                <h2>@L("Upcoming_Doses")</h2>
+    <div class="upcoming-doses">
+        <h2>@L("Upcoming_Doses")</h2>
         @if (upcomingDoses.Any())
         {
-                            <div class="upcoming-doses-list">
+            <div class="upcoming-doses-list">
                 @foreach (var dose in upcomingDoses.OrderBy(d => d.NextDoseTime).Take(5))
                 {
-                                                     <div class="upcoming-dose-item @(IsRecentlyDue(dose.NextDoseTime) ? "recent_due" : "")">
-                                                            <div class="dose-info">
-                                                                <span class="product-name">@dose.ProductName</span>
-                                                                <div class="dose-combined-info">
-                                                                    <span class="dose-detail">@dose.AmountTaken @dose.Unit</span>
+                    <div class="upcoming-dose-item @(IsRecentlyDue(dose.NextDoseTime) ? "recent_due" : "")">
+                        <div class="dose-info">
+                            <span class="product-name">@dose.ProductName</span>
+                            <div class="dose-combined-info">
+                                <span class="dose-detail">@dose.AmountTaken @dose.Unit</span>
                                 @if (IsRecentlyDue(dose.NextDoseTime))
                                 {
-                                                                                        <span class="due-text">@L("Due_Now")</span>
+                                    <span class="due-text">@L("Due_Now")</span>
                                 }
                                 else
                                 {
-                                                                                        <span class="dose-time-info">@FormatNextDoseTime(dose.NextDoseTime)</span>
+                                    <span class="dose-time-info">@FormatNextDoseTime(dose.NextDoseTime)</span>
                                 }
-                                                                </div>
-                                                            </div>
-                                                            <button class="take-product-button" @onclick="() => TakeProductDoseFromDosage(dose.ProductId, dose.DosageId, dose.AmountTaken)">@L("Take_Dose")</button>
-                                                        </div>
-                }
                             </div>
+                        </div>
+                        <button class="take-product-button" @onclick="() => HandleUpcomingDoseTake(dose.ProductId, dose.DosageId, dose.AmountTaken, dose.NextDoseTime, dose.ProductName)">@L("Take_Dose")</button>
+                    </div>
+                }
+            </div>
         }
         else
         {
-                            <p>@L("No_Upcoming_Doses")</p>
+            <p>@L("No_Upcoming_Doses")</p>
         }
-            </div>
+    </div>
 }
 
 <style>
-       .dose-combined-info {
-       display: flex;
-       align-items: center;
-       gap: 0.5rem;
-   }
+    .dose-combined-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
 
-      .dose-time-info {
-       font-size: 0.9rem;
-       color: #6c757d;
-   }
+    .dose-time-info {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
 
     .upcoming-doses, .missed-doses {
         margin-bottom: 2rem;
@@ -222,13 +253,90 @@ else
     button:hover {
         opacity: 0.9;
     }
+
+    /* In-page popup styles */
+    .in-page-popup {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background-color: white;
+        border-bottom: 1px solid #ddd;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+        transform: translateY(-100%);
+        transition: transform 0.3s ease-in-out;
+    }
+
+    .popup-visible {
+        transform: translateY(0);
+    }
+
+    .popup-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #eee;
+    }
+
+    .popup-title {
+        font-weight: bold;
+        font-size: 1.1rem;
+    }
+
+    .popup-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 0;
+        color: #6c757d;
+    }
+
+    .popup-body {
+        padding: 16px;
+    }
+
+    .popup-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 30px;
+        margin-top: 12px;
+        width: 100%;
+    }
+
+    .popup-button-yes {
+        padding: 8px 16px;
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .popup-button-no {
+        padding: 8px 16px;
+        background-color: #6c757d;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
 </style>
 
 @code {
     private List<Product>? products;
     private bool _permissionGranted;
     private List<UpcomingDose> upcomingDoses = new();
-    private List<MissedDose> missedDoses = new();
+    private List<MissedDosage> missedDosages = new();
+    private List<MissedDose> missedDoses = new(); // Keep this for backward compatibility
+
+    // In-page popup confirmation fields
+    private bool showConfirmationPopup = false;
+    private bool isConfirmationPopupVisible = false;
+    private PendingConfirmation pendingConfirmation = new();
 
     // Class to store information about upcoming doses
     private class UpcomingDose
@@ -241,7 +349,7 @@ else
         public DateTime NextDoseTime { get; set; }
     }
 
-    // Class to store information about missed doses
+    // Class to store information about missed doses (legacy)
     private class MissedDose
     {
         public int ProductId { get; set; }
@@ -252,17 +360,33 @@ else
         public DateTime ScheduledTime { get; set; }
     }
 
+    // Class to store pending confirmation details
+    private class PendingConfirmation
+    {
+        public int ProductId { get; set; }
+        public int DosageId { get; set; }
+        public double AmountTaken { get; set; }
+        public DateTime NextDoseTime { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+    }
+
     protected override async Task OnInitializedAsync()
     {
         await CheckNotificationPermission();
         await LoadProducts();
+        await LoadMissedDosages();
         await CalculateUpcomingDoses();
-        await CalculateMissedDoses();
+        await CalculateMissedDoses(); // Keep this for now as a fallback
     }
 
     private async Task LoadProducts()
     {
         products = await ProductService.GetProductsAsync();
+    }
+
+    private async Task LoadMissedDosages()
+    {
+        missedDosages = await ProductService.GetMissedDosagesAsync();
     }
 
     private async Task CalculateUpcomingDoses()
@@ -279,13 +403,26 @@ else
             // Find the earliest upcoming dose for this product
             foreach (var dosage in product.Dosages)
             {
-                var nextDoseTime = GetNextDoseTime(product, dosage);
-                if (nextDoseTime.HasValue)
+                // Use the NextDose property if available
+                if (dosage.NextDose.HasValue)
                 {
-                    if (earliestDoseTime == null || nextDoseTime.Value < earliestDoseTime.Value)
+                    if (earliestDoseTime == null || dosage.NextDose.Value < earliestDoseTime.Value)
                     {
-                        earliestDoseTime = nextDoseTime.Value;
+                        earliestDoseTime = dosage.NextDose.Value;
                         earliestDosage = dosage;
+                    }
+                }
+                else
+                {
+                    // Fallback to calculating next dose time
+                    var nextDoseTime = GetNextDoseTime(product, dosage);
+                    if (nextDoseTime.HasValue)
+                    {
+                        if (earliestDoseTime == null || nextDoseTime.Value < earliestDoseTime.Value)
+                        {
+                            earliestDoseTime = nextDoseTime.Value;
+                            earliestDosage = dosage;
+                        }
                     }
                 }
             }
@@ -308,6 +445,8 @@ else
 
     private async Task CalculateMissedDoses()
     {
+        // This method is kept as a fallback but shouldn't be needed anymore
+        // since we now use the MissedDosages collection from each product
         missedDoses.Clear();
 
         if (products == null) return;
@@ -448,6 +587,12 @@ else
 
     private DateTime? GetNextDoseTime(Product product, DosageSchedule dosage)
     {
+        // Use NextDose if available
+        if (dosage.NextDose.HasValue)
+        {
+            return dosage.NextDose;
+        }
+
         // Find when this dosage was last taken
         var lastTaken = product.History
             .Where(h => h.DosageId == dosage.Id)
@@ -620,6 +765,14 @@ else
         return timeDiff > TimeSpan.Zero && timeDiff < TimeSpan.FromHours(1);
     }
 
+    // Check if dose is far in the future (more than 3 hours)
+    private bool IsFarIntoFuture(DateTime doseTime)
+    {
+        // Check if the dose is scheduled for more than 3 hours in the future
+        TimeSpan timeDiff = doseTime - DateTime.Now;
+        return timeDiff > TimeSpan.FromHours(3);
+    }
+
     private string FormatNextDoseTime(DateTime nextDose)
     {
         DateTime now = DateTime.Now;
@@ -687,31 +840,179 @@ else
         NavigationManager.NavigateTo("/addproduct");
     }
 
+    // New method to handle upcoming dose taking with confirmation when needed
+    private async Task HandleUpcomingDoseTake(int productId, int dosageId, double amountTaken, DateTime scheduledTime, string productName)
+    {
+        if (IsFarIntoFuture(scheduledTime))
+        {
+            // Show in-page confirmation popup for doses more than 3 hours in the future
+            await ShowConfirmationPopup(productId, dosageId, amountTaken, scheduledTime, productName);
+        }
+        else
+        {
+            // Take the dose immediately for doses less than 3 hours away
+            await TakeProductDoseFromDosage(productId, dosageId, amountTaken);
+        }
+    }
+
+    // Shows the in-page confirmation popup
+    private async Task ShowConfirmationPopup(int productId, int dosageId, double amountTaken, DateTime scheduledTime, string productName)
+    {
+        pendingConfirmation = new PendingConfirmation
+            {
+                ProductId = productId,
+                DosageId = dosageId,
+                AmountTaken = amountTaken,
+                NextDoseTime = scheduledTime,
+                ProductName = productName
+            };
+
+        // First set the popup to be rendered
+        showConfirmationPopup = true;
+
+        // Force immediate UI update
+        StateHasChanged();
+
+        // Use a small delay before showing the animation to ensure DOM has updated
+        await Task.Delay(50);
+
+        // Then make it visible with animation (on UI thread)
+        await InvokeAsync(() =>
+        {
+            isConfirmationPopupVisible = true;
+            StateHasChanged();
+        });
+    }
+
+    // Hides the in-page confirmation popup
+    private async Task HideConfirmationPopup()
+    {
+        // Start the hiding animation
+        isConfirmationPopupVisible = false;
+        StateHasChanged();
+
+        // Wait for animation to complete
+        await Task.Delay(300);
+
+        // Remove from DOM (on UI thread)
+        await InvokeAsync(() =>
+        {
+            showConfirmationPopup = false;
+            StateHasChanged();
+        });
+    }
+
+    // Confirms taking the dose from the popup
+    private async Task ConfirmTakeDose()
+    {
+        await TakeProductDoseFromDosage(
+            pendingConfirmation.ProductId,
+            pendingConfirmation.DosageId,
+            pendingConfirmation.AmountTaken);
+
+        await HideConfirmationPopup();
+    }
+
     private async Task TakeProductDoseFromDosage(int productId, int dosageId, double amountTaken)
     {
         var success = await ProductService.TakeProductDoseAsync(productId, amountTaken, dosageId);
 
+        if (success)
+        {
+            // Show toast notification for successful dose taking
+            var toast = Toast.Make(L("Dose_Taken_Successfully"));
+            await toast.Show();
+        }
+
         // Refresh the product list to show updated quantities
         await LoadProducts();
+        await LoadMissedDosages();
         await CalculateUpcomingDoses();
         await CalculateMissedDoses();
     }
 
+    private async Task TakeMissedDosage(int productId, int dosageId, int missedDosageId, double amountTaken)
+    {
+        // First, take the product dose
+        var product = products?.FirstOrDefault(p => p.Id == productId);
+        if (product == null) return;
+
+        // Find the missed dosage
+        var missedDosage = product.MissedDosages.FirstOrDefault(m => m.Id == missedDosageId);
+        if (missedDosage == null) return;
+
+        // Create a usage history entry with the scheduled time from the missed dosage
+        var historyEntry = new UsageHistory
+            {
+                ProductId = productId,
+                DosageId = dosageId,
+                Timestamp = DateTime.Now,
+                ScheduleTime = missedDosage.ScheduledTime,
+                AmountTaken = amountTaken,
+                Event = EventType.Taken
+            };
+
+        // Update product quantity
+        product.Quantity -= amountTaken;
+
+        // Remove the missed dosage and add the history entry
+        // We'll do this through our service
+        var success = await ProductService.TakeMissedDosage(productId, missedDosageId, amountTaken);
+
+        if (success)
+        {
+            // Show toast notification for successful missed dose taking
+            string message = string.Format(L("Product_Dose_Taken"), product.Name);
+            var toast = Toast.Make(message, ToastDuration.Short, 14);
+            await toast.Show();
+        }
+
+        // Refresh the data
+        await LoadProducts();
+        await LoadMissedDosages();
+        await CalculateUpcomingDoses();
+        await CalculateMissedDoses();
+    }
+
+    private async Task SkipMissedDosage(int productId, int missedDosageId)
+    {
+        // Find the product
+        var product = products?.FirstOrDefault(p => p.Id == productId);
+        if (product == null) return;
+
+        var success = await ProductService.SkipMissedDosageAsync(productId, missedDosageId);
+
+        if (success)
+        {
+            // Show toast notification for skipping the dose
+            string message = string.Format(L("Dose_Skipped"), product.Name);
+            var toast = Toast.Make(message, ToastDuration.Short, 14);
+            await toast.Show();
+        }
+
+        // Refresh the data
+        await LoadProducts();
+        await LoadMissedDosages();
+        await CalculateUpcomingDoses();
+    }
+
     private async Task SkipMissedDose(MissedDose missedDose)
     {
-        // Record a skipped dose by creating a history entry with amount taken as 0
+        // This is the legacy method, kept for backward compatibility
         var skipHistory = new UsageHistory
             {
                 ProductId = missedDose.ProductId,
                 DosageId = missedDose.DosageId,
                 Timestamp = missedDose.ScheduledTime,
-                AmountTaken = 0 // 0 indicates a skipped dose
+                AmountTaken = 0, // 0 indicates a skipped dose
+                Event = EventType.Skipped
             };
 
         await ProductService.AddProductHistoryManuallyAsync(skipHistory);
 
         // Recalculate doses
         await LoadProducts();
+        await LoadMissedDosages();
         await CalculateUpcomingDoses();
         await CalculateMissedDoses();
     }

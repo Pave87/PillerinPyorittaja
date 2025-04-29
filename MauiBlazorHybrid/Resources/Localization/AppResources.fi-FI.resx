@@ -125,7 +125,7 @@
 		<value>Yksikkö</value>
 	</data>
 	<data name="Products_Per_Package" xml:space="preserve">
-		<value>{unit} pakkauksessa</value>
+		<value>Pakkauksessa</value>
 	</data>
 	<data name="Dosages" xml:space="preserve">
 		<value>Annos ajat</value>
@@ -234,5 +234,29 @@
 	</data>
 	<data name="Skip" xml:space="preserve">
 		<value>Ohita</value>
+	</data>
+	<data name="Hour_Ago" xml:space="preserve">
+		<value>Tunti sitten</value>
+	</data>
+	<data name="Hours_Ago" xml:space="preserve">
+		<value>Tuntia sitten</value>
+	</data>
+	<data name="Day_Ago" xml:space="preserve">
+		<value>Päivä sitten</value>
+	</data>
+	<data name="Days_Ago" xml:space="preserve">
+		<value>Päivää sitten</value>
+	</data>
+	<data name="Early_Dose_Confirmation" xml:space="preserve">
+		<value>Vahvista varhainen annos</value>
+	</data>
+	<data name="Early_Dose_Message" xml:space="preserve">
+		<value>Oletko varma, että haluat ottaa {productName} annoksen {scheduledTime} jo nyt?</value>
+	</data>
+	<data name="Yes" xml:space="preserve">
+		<value>Kyllä</value>
+	</data>
+	<data name="No" xml:space="preserve">
+		<value>Ei</value>
 	</data>
 </root>

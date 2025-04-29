@@ -46,17 +46,64 @@ public class ProductService : IProductService
         {
             var json = File.ReadAllText(_filePath);
             _products = JsonSerializer.Deserialize<List<Product>>(json) ?? new();
-            // Ensure all pills have a history collection
+            // Ensure all products have the necessary collections
             foreach (var product in _products)
             {
                 product.History ??= new List<UsageHistory>();
+                product.MissedDosages ??= new List<MissedDosage>();
+
+                // Calculate next dose for each dosage if not set
+                foreach (var dosage in product.Dosages)
+                {
+                    if (dosage.NextDose == null)
+                    {
+                        dosage.NextDose = CalculateNextDoseTime(dosage, null);
+                    }
+                }
             }
-            // Reschedule notifications for all pills on load
+            // Reschedule notifications for all products on load
             foreach (var product in _products)
             {
                 RescheduleNotificationsForProduct(product).ConfigureAwait(false);
             }
+
+            // Process any missed dosages
+            ProcessMissedDosages().ConfigureAwait(false);
         }
+    }
+
+    private async Task ProcessMissedDosages()
+    {
+        DateTime now = DateTime.Now;
+
+        foreach (var product in _products)
+        {
+            // Check for missed dosages
+            foreach (var dosage in product.Dosages.ToList())
+            {
+                if (dosage.NextDose.HasValue && dosage.NextDose.Value < now.AddHours(-1))
+                {
+                    // This dosage is missed (more than 1 hour late)
+                    // Create a MissedDosage record
+                    var missedDosage = new MissedDosage
+                    {
+                        Id = product.MissedDosages.Count > 0 ? product.MissedDosages.Max(m => m.Id) + 1 : 1,
+                        ProductId = product.Id,
+                        DosageId = dosage.Id,
+                        ScheduledTime = dosage.NextDose.Value,
+                        Processed = false
+                    };
+
+                    product.MissedDosages.Add(missedDosage);
+
+                    // Update the NextDose time
+                    dosage.NextDose = CalculateNextDoseTime(dosage, now);
+                }
+            }
+        }
+
+        // Save changes
+        await SaveProductsAsync();
     }
 
     private async Task SaveProductsAsync()
@@ -67,11 +114,13 @@ public class ProductService : IProductService
 
     public async Task<List<Product>> GetProductsAsync()
     {
+        await ProcessMissedDosages(); // Check for missed dosages before returning products
         return _products;
     }
 
     public async Task<Product?> GetProductAsync(int id)
     {
+        await ProcessMissedDosages(); // Check for missed dosages
         return _products.FirstOrDefault(p => p.Id == id);
     }
 
@@ -79,10 +128,18 @@ public class ProductService : IProductService
     {
         product.Id = _products.Count > 0 ? _products.Max(p => p.Id) + 1 : 1;
         product.History ??= new List<UsageHistory>();
+        product.MissedDosages ??= new List<MissedDosage>();
+
+        // Calculate and set the NextDose for each dosage
+        foreach (var dosage in product.Dosages)
+        {
+            dosage.NextDose = CalculateNextDoseTime(dosage, null);
+        }
+
         _products.Add(product);
         await SaveProductsAsync();
 
-        // Schedule notifications for new pill
+        // Schedule notifications for new product
         await ScheduleNotificationsForProduct(product);
 
         return product;
@@ -95,10 +152,35 @@ public class ProductService : IProductService
         {
             try
             {
-                // Preserve history if it exists in the current pill but not in the updated one
+                // Preserve history if it exists in the current product but not in the updated one
                 if (product.History == null || !product.History.Any())
                 {
                     product.History = _products[index].History ?? new List<UsageHistory>();
+                }
+
+                // Preserve missed dosages if not in the updated product
+                if (product.MissedDosages == null || !product.MissedDosages.Any())
+                {
+                    product.MissedDosages = _products[index].MissedDosages ?? new List<MissedDosage>();
+                }
+
+                // Make sure all dosages have NextDose set
+                foreach (var dosage in product.Dosages)
+                {
+                    if (dosage.NextDose == null)
+                    {
+                        // Get the matching dosage from the original product if it exists
+                        var originalDosage = _products[index].Dosages.FirstOrDefault(d => d.Id == dosage.Id);
+                        if (originalDosage?.NextDose != null)
+                        {
+                            dosage.NextDose = originalDosage.NextDose;
+                        }
+                        else
+                        {
+                            // Calculate new NextDose time
+                            dosage.NextDose = CalculateNextDoseTime(dosage, null);
+                        }
+                    }
                 }
 
                 // Cancel existing notifications
@@ -108,16 +190,16 @@ public class ProductService : IProductService
                 await SaveProductsAsync();
 
                 // Add debug output
-                System.Diagnostics.Debug.WriteLine($"Scheduling notifications for updated pill {product.Id}");
+                System.Diagnostics.Debug.WriteLine($"Scheduling notifications for updated product {product.Id}");
 
                 // Schedule new notifications and await it
                 await ScheduleNotificationsForProduct(product);
 
-                System.Diagnostics.Debug.WriteLine($"Notifications scheduled for pill {product.Id}");
+                System.Diagnostics.Debug.WriteLine($"Notifications scheduled for product {product.Id}");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error updating pill notifications: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error updating product notifications: {ex.Message}");
                 throw;
             }
         }
@@ -150,20 +232,67 @@ public class ProductService : IProductService
             // Reduce the quantity
             product.Quantity -= amount;
 
-            // Record the pill intake in history
+            // Determine the scheduled time
+            DateTime? scheduleTime = null;
+
+            if (dosageId.HasValue)
+            {
+                // Find the matching dosage
+                var dosage = product.Dosages.FirstOrDefault(d => d.Id == dosageId.Value);
+                if (dosage != null)
+                {
+                    // Use NextDose as the schedule time if available
+                    if (dosage.NextDose.HasValue)
+                    {
+                        scheduleTime = dosage.NextDose;
+                    }
+                    else if (dosage.Time.HasValue)
+                    {
+                        // Fallback to calculating it
+                        var now = DateTime.Now;
+                        scheduleTime = new DateTime(
+                            now.Year,
+                            now.Month,
+                            now.Day,
+                            dosage.Time.Value.Hour,
+                            dosage.Time.Value.Minute,
+                            0);
+                    }
+
+                    // Remove any matching missed dosage if within a reasonable timeframe
+                    if (scheduleTime.HasValue)
+                    {
+                        var missedDosage = product.MissedDosages.FirstOrDefault(m =>
+                            m.DosageId == dosageId.Value &&
+                            Math.Abs((m.ScheduledTime - scheduleTime.Value).TotalHours) < 12);
+
+                        if (missedDosage != null)
+                        {
+                            product.MissedDosages.Remove(missedDosage);
+                        }
+                    }
+
+                    // Calculate and set next dose time
+                    dosage.NextDose = CalculateNextDoseTime(dosage, DateTime.Now);
+                }
+            }
+
+            // Record the product intake in history
             var historyEntry = new UsageHistory
             {
                 Id = product.History.Count > 0 ? product.History.Max(h => h.Id) + 1 : 1,
                 ProductId = productId,
                 Timestamp = DateTime.Now,
                 AmountTaken = amount,
-                DosageId = dosageId
+                DosageId = dosageId,
+                ScheduleTime = scheduleTime,
+                Event = EventType.Taken
             };
 
             product.History.Add(historyEntry);
             await SaveProductsAsync();
 
-            // Reschedule notifications after taking a pill to update the next dose time
+            // Reschedule notifications after taking a product to update the next dose time
             if (dosageId.HasValue)
             {
                 await _notificationService.CancelNotificationsAsync(productId);
@@ -184,8 +313,40 @@ public class ProductService : IProductService
         var dosage = product.Dosages.FirstOrDefault(d => d.Id == dosageId);
         if (dosage == null) return false;
 
-        // Use the dosage amount for the pill intake
+        // Use the dosage amount for the product intake
         return await TakeProductDoseAsync(productId, dosage.AmountTaken, dosageId);
+    }
+
+    public async Task<bool> SkipMissedDosageAsync(int productId, int missedDosageId)
+    {
+        var product = _products.FirstOrDefault(p => p.Id == productId);
+        if (product == null) return false;
+
+        var missedDosage = product.MissedDosages.FirstOrDefault(m => m.Id == missedDosageId);
+        if (missedDosage == null) return false;
+
+        // Mark as processed
+        missedDosage.Processed = true;
+
+        // Create a history entry for skipping this dose
+        var historyEntry = new UsageHistory
+        {
+            Id = product.History.Count > 0 ? product.History.Max(h => h.Id) + 1 : 1,
+            ProductId = productId,
+            Timestamp = DateTime.Now,
+            AmountTaken = 0, // 0 amount for skipped doses
+            DosageId = missedDosage.DosageId,
+            ScheduleTime = missedDosage.ScheduledTime,
+            Event = EventType.Skipped
+        };
+
+        product.History.Add(historyEntry);
+
+        // Remove the missed dosage from the list
+        product.MissedDosages.Remove(missedDosage);
+
+        await SaveProductsAsync();
+        return true;
     }
 
     public async Task<List<UsageHistory>> GetProductHistoryAsync(int productId)
@@ -207,6 +368,29 @@ public class ProductService : IProductService
         return allHistory.OrderByDescending(h => h.Timestamp).ToList();
     }
 
+    public async Task<List<MissedDosage>> GetMissedDosagesAsync(int? productId = null)
+    {
+        await ProcessMissedDosages(); // Make sure missed dosages are up to date
+
+        if (productId.HasValue)
+        {
+            var product = _products.FirstOrDefault(p => p.Id == productId.Value);
+            return product?.MissedDosages?.OrderBy(m => m.ScheduledTime).ToList() ?? new List<MissedDosage>();
+        }
+        else
+        {
+            var allMissedDosages = new List<MissedDosage>();
+            foreach (var product in _products)
+            {
+                if (product.MissedDosages != null && product.MissedDosages.Any())
+                {
+                    allMissedDosages.AddRange(product.MissedDosages);
+                }
+            }
+            return allMissedDosages.OrderBy(m => m.ScheduledTime).ToList();
+        }
+    }
+
     public async Task AddProductHistoryManuallyAsync(UsageHistory history)
     {
         var product = _products.FirstOrDefault(p => p.Id == history.ProductId);
@@ -217,6 +401,17 @@ public class ProductService : IProductService
 
             // Add the history entry
             product.History.Add(history);
+
+            // If this is a Taken or Skipped event with a dosage ID, update the NextDose time
+            if ((history.Event == EventType.Taken || history.Event == EventType.Skipped) && history.DosageId.HasValue)
+            {
+                var dosage = product.Dosages.FirstOrDefault(d => d.Id == history.DosageId.Value);
+                if (dosage != null)
+                {
+                    dosage.NextDose = CalculateNextDoseTime(dosage, history.Timestamp);
+                }
+            }
+
             await SaveProductsAsync();
 
             // Reschedule notifications if this was for a specific dosage
@@ -230,26 +425,33 @@ public class ProductService : IProductService
 
     private async Task ScheduleNotificationsForProduct(Product product)
     {
-        // We'll calculate and schedule only the next upcoming dose for each dosage
+        // We'll schedule notifications for each dosage based on its NextDose time
         foreach (var dosage in product.Dosages)
         {
-            // Find when this dosage was last taken
-            var lastTaken = product.History
-                .Where(h => h.DosageId == dosage.Id)
-                .OrderByDescending(h => h.Timestamp)
-                .FirstOrDefault();
+            if (dosage.NextDose.HasValue)
+            {
+                // Use the precalculated NextDose time
+                await _notificationService.ScheduleNotificationAsync(product, dosage, dosage.NextDose.Value);
+            }
+            else
+            {
+                // Calculate it if not available
+                DateTime nextDoseTime = CalculateNextDoseTime(dosage, null);
+                dosage.NextDose = nextDoseTime;
 
-            DateTime nextDoseTime = CalculateNextDoseTime(dosage, lastTaken?.Timestamp);
-
-            // Schedule notification for this next dose
-            await _notificationService.ScheduleNotificationAsync(product, dosage, nextDoseTime);
+                // Schedule notification for this next dose
+                await _notificationService.ScheduleNotificationAsync(product, dosage, nextDoseTime);
+            }
         }
+
+        // Save the updated NextDose times
+        await SaveProductsAsync();
     }
 
     private DateTime CalculateNextDoseTime(DosageSchedule dosage, DateTime? lastTakenTime)
     {
         // Current time to base calculations on
-        DateTime now = DateTime.Now;
+        DateTime now = lastTakenTime ?? DateTime.Now;
 
         // If there's no time set in the dosage, default to current time
         TimeOnly dosageTimeOfDay = dosage.Time ?? TimeOnly.FromDateTime(now);
@@ -263,7 +465,7 @@ public class ProductService : IProductService
             dosageTimeOfDay.Minute,
             0);
 
-        // If we've never taken this pill before or no dosage ID was recorded
+        // If we've never taken this product before or no dosage ID was recorded
         if (lastTakenTime == null)
         {
             // If today's dose time is already past, schedule for next occurrence
@@ -284,7 +486,7 @@ public class ProductService : IProductService
         }
         else
         {
-            // We have a record of when this pill was last taken
+            // We have a record of when this product was last taken
             DateTime lastTaken = lastTakenTime.Value;
 
             // Calculate the next dose based on frequency and repetition
@@ -414,7 +616,56 @@ public class ProductService : IProductService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to reschedule notifications for pill {pill.Id}: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Failed to reschedule notifications for product {pill.Id}: {ex.Message}");
         }
+    }
+    public async Task<bool> TakeMissedDosage(int productId, int missedDosageId, double amountTaken)
+    {
+        var product = _products.FirstOrDefault(p => p.Id == productId);
+        if (product == null) return false;
+
+        // Find the missed dosage
+        var missedDosage = product.MissedDosages.FirstOrDefault(m => m.Id == missedDosageId);
+        if (missedDosage == null) return false;
+
+        // Check if we have enough product
+        if (product.Quantity < amountTaken) return false;
+
+        // Reduce the quantity
+        product.Quantity -= amountTaken;
+
+        // Create a history entry for taking this dose
+        var historyEntry = new UsageHistory
+        {
+            Id = product.History.Count > 0 ? product.History.Max(h => h.Id) + 1 : 1,
+            ProductId = productId,
+            Timestamp = DateTime.Now,
+            AmountTaken = amountTaken,
+            DosageId = missedDosage.DosageId,
+            ScheduleTime = missedDosage.ScheduledTime,
+            Event = EventType.Taken
+        };
+
+        // Add the history entry
+        product.History.Add(historyEntry);
+
+        // Remove the missed dosage
+        product.MissedDosages.Remove(missedDosage);
+
+        // If there's a related dosage, update its NextDose time
+        var dosage = product.Dosages.FirstOrDefault(d => d.Id == missedDosage.DosageId);
+        if (dosage != null)
+        {
+            dosage.NextDose = CalculateNextDoseTime(dosage, DateTime.Now);
+        }
+
+        // Save changes
+        await SaveProductsAsync();
+
+        // Reschedule notifications
+        await _notificationService.CancelNotificationsAsync(productId);
+        await ScheduleNotificationsForProduct(product);
+
+        return true;
     }
 }

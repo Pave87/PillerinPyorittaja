@@ -37,9 +37,9 @@
             <div class="form-group">
                 <label>@L("Time"):</label>
                 <input type="time"
-                       @bind="dosage.Time"
-                       @bind:event="oninput"
-                       class="form-control" />
+                @bind="dosage.Time"
+                @bind:event="oninput"
+                class="form-control" />
             </div>
 
             <div class="form-group">
@@ -69,8 +69,8 @@
                         {
                             <label class="weekday-checkbox">
                                 <input type="checkbox"
-                                       checked="@(dosage.SelectedDays?.Contains(day) ?? false)"
-                                       @onchange="@(e => ToggleWeekday(dosage, day, (bool)e.Value))" />
+                                checked="@(dosage.SelectedDays?.Contains(day) ?? false)"
+                                @onchange="@(e => ToggleWeekday(dosage, day, (bool)e.Value))" />
                                 @L(day)
                             </label>
                         }
@@ -98,95 +98,95 @@
 
 <style>
     form {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-        max-width: 550px;
-        margin: 0 auto;
-        padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-width: 550px;
+    margin: 0 auto;
+    padding: 1rem;
     }
 
     .form-group {
-        margin-bottom: 1rem;
+    margin-bottom: 1rem;
     }
 
     label {
-        display: block;
-        font-weight: bold;
-        margin-bottom: 0.5rem;
+    display: block;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
     }
 
     .form-control {
-        width: 100%;
-        padding: 0.5rem;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 1rem;
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
     }
 
     .dosage-row {
-        border: 1px solid #eee;
-        border-radius: 8px;
-        padding: 1rem;
-        margin-bottom: 1rem;
-        background-color: #f9f9f9;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background-color: #f9f9f9;
     }
 
     .weekday-selection {
-        margin-top: 1rem;
+    margin-top: 1rem;
     }
 
     .weekday-checkboxes {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        margin-top: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
     }
 
     .weekday-checkbox {
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-        margin-right: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-right: 1rem;
     }
 
     .btn-add-dosage {
-        display: block;
-        padding: 0.5rem 1rem;
-        background-color: #17a2b8;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        margin: 1rem 0;
+    display: block;
+    padding: 0.5rem 1rem;
+    background-color: #17a2b8;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin: 1rem 0;
     }
 
     .form-actions {
-        display: flex;
-        gap: 1rem;
-        margin-top: 2rem;
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
     }
 
     .btn-submit, .btn-cancel {
-        padding: 0.75rem 1.5rem;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-weight: 500;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
     }
 
     .btn-submit {
-        background-color: #28a745;
-        color: white;
+    background-color: #28a745;
+    color: white;
     }
 
     .btn-cancel {
-        background-color: #6c757d;
-        color: white;
+    background-color: #6c757d;
+    color: white;
     }
 
     button:hover {
-        opacity: 0.9;
+    opacity: 0.9;
     }
 </style>
 
@@ -201,6 +201,7 @@
     private List<DosageSchedule> Dosages { get; set; } = new();
     private readonly string[] WeekDays = new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
     private int _nextDosageId = 1; // Track next dosage ID
+    private Dictionary<int, DosageSchedule> _originalDosages = new(); // Store original dosages for comparison
 
     protected override async Task OnInitializedAsync()
     {
@@ -273,6 +274,51 @@
         }
     }
 
+    private bool IsDosageModified(DosageSchedule current, DosageSchedule original)
+    {
+        // Check if any of the dosage properties were modified
+        if (current.Time != original.Time ||
+            current.Repetition != original.Repetition ||
+            current.Frequency != original.Frequency ||
+            current.AmountTaken != original.AmountTaken)
+            return true;
+
+        // Check if selected days were modified
+        if (current.Frequency == "Weeks")
+        {
+            var currentDays = current.SelectedDays ?? new List<string>();
+            var originalDays = original.SelectedDays ?? new List<string>();
+
+            if (currentDays.Count != originalDays.Count)
+                return true;
+
+            foreach (var day in currentDays)
+            {
+                if (!originalDays.Contains(day))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    private async Task AddHistoryEntry(Product product, int dosageId, EventType eventType)
+    {
+        // Create a history entry for the event
+        var historyEntry = new UsageHistory
+            {
+                Id = product.History.Count > 0 ? product.History.Max(h => h.Id) + 1 : 1,
+                ProductId = product.Id,
+                Timestamp = DateTime.Now,
+                AmountTaken = 0, // Not taking any amount for this event
+                DosageId = dosageId,
+                Event = eventType
+            };
+
+        // Add the history entry to the product
+        product.History.Add(historyEntry);
+    }
+
     private async Task HandleSubmit()
     {
         try
@@ -290,10 +336,33 @@
                     existingProduct.AmountPerPackage = AmountPerPackage;
                     existingProduct.Unit = Unit;
 
-                    // Ensure all dosages have the correct ProductId
+                    // Process each dosage
                     foreach (var dosage in Dosages)
                     {
                         dosage.ProductId = existingProduct.Id;
+
+                        // Check if it's a new dosage or a modified one
+                        if (!_originalDosages.ContainsKey(dosage.Id))
+                        {
+                            // This is a new dosage, create an "Added" event
+                            await AddHistoryEntry(existingProduct, dosage.Id, EventType.Created);
+                        }
+                        else if (IsDosageModified(dosage, _originalDosages[dosage.Id]))
+                        {
+                            // This is a modified dosage, create a "Modified" event
+                            await AddHistoryEntry(existingProduct, dosage.Id, EventType.Modified);
+                        }
+                        // If not modified, don't add a history entry
+                    }
+
+                    // Check for deleted dosages
+                    foreach (var originalDosageId in _originalDosages.Keys)
+                    {
+                        if (!Dosages.Any(d => d.Id == originalDosageId))
+                        {
+                            // This dosage was removed, create a "Removed" event
+                            await AddHistoryEntry(existingProduct, originalDosageId, EventType.Removed);
+                        }
                     }
 
                     existingProduct.Dosages = Dosages;
@@ -318,6 +387,9 @@
                 foreach (var dosage in Dosages)
                 {
                     dosage.ProductId = savedProduct.Id;
+
+                    // For new products, mark all dosages as "Added"
+                    await AddHistoryEntry(savedProduct, dosage.Id, EventType.Created);
                 }
 
                 // Update the product with dosages

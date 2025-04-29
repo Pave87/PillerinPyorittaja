@@ -16,4 +16,7 @@ public interface IProductService
     Task<List<UsageHistory>> GetProductHistoryAsync(int productId);
     Task<List<UsageHistory>> GetAllProductHistoryAsync();
     Task AddProductHistoryManuallyAsync(UsageHistory history);
+    Task<List<MissedDosage>> GetMissedDosagesAsync(int? productId = null);
+    Task<bool> SkipMissedDosageAsync(int productId, int missedDosageId);
+    Task<bool> TakeMissedDosage(int productId, int missedDosageId, double amountTaken);
 }
