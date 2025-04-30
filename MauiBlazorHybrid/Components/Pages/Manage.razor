@@ -10,15 +10,33 @@
 
 <h1>@L("Manage_Tittle")</h1>
 
+@if (showDeleteConfirmation)
+{
+    <div class="popup-overlay @(isDeletePopupVisible ? "overlay-visible" : "")" @onclick="HideDeleteConfirmation"></div>
+    <div class="in-page-popup @(isDeletePopupVisible ? "popup-visible" : "")">
+        <div class="popup-header">
+            <span class="popup-title">@L("Confirm_Delete_Product")</span>
+            <button class="popup-close" @onclick="HideDeleteConfirmation">×</button>
+        </div>
+        <div class="popup-body">
+            <p>@L("Are_You_Sure_Delete_Product")</p>
+            <div class="popup-actions">
+                <button class="popup-button-no" @onclick="HideDeleteConfirmation">@L("No")</button>
+                <button class="popup-button-yes" @onclick="ConfirmDeleteProduct">@L("Yes")</button>
+            </div>
+        </div>
+    </div>
+}
+
 <button class="add-product-button" @onclick="NavigateToAddProduct">@L("Add_New_Product")</button>
 
-@if (!_permissionGranted)
+@* @if (!_permissionGranted)
 {
     <div class="alert alert-warning">
         <p>@L("Notifications_Not_Enabled")</p>
         <button class="permission-button" @onclick="RequestNotificationPermission">@L("Enable_Notifications")</button>
     </div>
-}
+} *@
 
 @if (products == null)
 {
@@ -112,7 +130,7 @@ else
                         <button class="edit-button" @onclick="() => NavigateToEdit(product.Id)">
                             @L("Edit")
                         </button>
-                        <button class="delete-button" @onclick="() => DeleteProduct(product.Id)">
+                        <button class="delete-button" @onclick="() => ShowDeleteConfirmation(product.Id)">
                             @L("Delete")
                         </button>
                     </div>
@@ -259,11 +277,109 @@ else
         align-items: center;
         padding: 0.5rem 0;
     }
+
+    /* Custom popup styles */
+    .popup-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+    }
+
+    .overlay-visible {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .in-page-popup {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.9);
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        width: 90%;
+        max-width: 400px;
+        opacity: 0;
+        transition: all 0.3s ease;
+        pointer-events: none;
+    }
+
+    .popup-visible {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .popup-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .popup-title {
+        font-weight: 600;
+        font-size: 1.2rem;
+    }
+
+    .popup-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 0;
+        color: #6c757d;
+    }
+
+    .popup-body {
+        padding: 16px;
+    }
+
+    .popup-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 16px;
+    }
+
+    .popup-button-yes,
+    .popup-button-no {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 500;
+    }
+
+    .popup-button-yes {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .popup-button-no {
+        background-color: #6c757d;
+        color: white;
+    }
 </style>
 
 @code {
     private List<Product>? products;
     private bool _permissionGranted;
+
+    // Custom popup state variables
+    private bool showDeleteConfirmation = false;
+    private bool isDeletePopupVisible = false;
+    private int pendingDeleteProductId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -298,14 +414,46 @@ else
         NavigationManager.NavigateTo($"/addproduct/{productId}");
     }
 
-    private async Task DeleteProduct(int productId)
+    // Show the custom delete confirmation popup
+    private async Task ShowDeleteConfirmation(int productId)
     {
-        var confirmed = await JS.InvokeAsync<bool>("confirm", L("Confirm_Delete_Product"));
-        if (confirmed)
-        {
-            await ProductService.DeleteProductAsync(productId);
-            await LoadProducts();
-        }
+        pendingDeleteProductId = productId;
+
+        // First set the popup to be rendered
+        showDeleteConfirmation = true;
+
+        // Force immediate UI update
+        StateHasChanged();
+
+        // Use a small delay to ensure DOM has been updated
+        await Task.Delay(50);
+
+        // Then make it visible with animation
+        isDeletePopupVisible = true;
+        StateHasChanged();
+    }
+
+    // Hide the custom delete confirmation popup
+    private async Task HideDeleteConfirmation()
+    {
+        // Start the hiding animation
+        isDeletePopupVisible = false;
+        StateHasChanged();
+
+        // Wait for animation to complete
+        await Task.Delay(300);
+
+        // Remove from DOM
+        showDeleteConfirmation = false;
+        StateHasChanged();
+    }
+
+    // Process the deletion after confirmation
+    private async Task ConfirmDeleteProduct()
+    {
+        await ProductService.DeleteProductAsync(pendingDeleteProductId);
+        await LoadProducts();
+        await HideDeleteConfirmation();
     }
 
     private async Task AddPacket(int productId)
@@ -326,11 +474,13 @@ else
 
         if (success)
         {
-
+            // Inform user of successful action
+            await JS.InvokeVoidAsync("alert", L("Dose_Taken_Successfully"));
         }
         else
         {
-
+            // Inform user of failed action
+            await JS.InvokeVoidAsync("alert", L("Not_Enough_Product_Remaining"));
         }
 
         // Refresh the product list to show updated quantities
