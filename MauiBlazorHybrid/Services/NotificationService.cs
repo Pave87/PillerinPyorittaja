@@ -10,6 +10,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using static Android.Icu.Text.CaseMap;
+
 #if ANDROID
 using Android.App;
 using Android.Content;
@@ -46,11 +48,11 @@ namespace MauiBlazorHybrid.Services
         // Helper method to get localized text
         private string L(string key)
         {
-            // Make sure we're initialized before trying to use the localization service
-            if (!_initialized)
+            int retryCount = 0;
+
+            while (!_initialized && retryCount < 10)
             {
-                // Return a placeholder until we're ready to display real messages
-                return key;
+                Task.Delay(100);
             }
             return _localizationService.GetString(key);
         }
@@ -58,11 +60,11 @@ namespace MauiBlazorHybrid.Services
         // Helper method to get localized text with formatting using named parameters
         private string LF(string key, Dictionary<string, object> parameters)
         {
-            // Make sure we're initialized before trying to use the localization service
-            if (!_initialized)
+            int retryCount = 0;
+
+            while (!_initialized && retryCount < 10)
             {
-                // Return a placeholder until we're ready to display real messages
-                return key;
+                Task.Delay(100);
             }
             return _localizationService.Format(key, parameters);
         }
@@ -315,26 +317,30 @@ namespace MauiBlazorHybrid.Services
                 var messageParams = new Dictionary<string, object>
                     {
                         { "amount", dosage.AmountTaken.ToString() },
-                        { "unit", dosage.AmountTaken == 1 ? L("Unit_Single") : L("Unit_Plural") },
+                        { "unit", product.Unit },
                         { "productName", product.Name }
                     };
                 string message = LF("Take_Amount_Of", messageParams);
 
-                // Add the new notification with localized text
-                _scheduledNotifications.Add(new ScheduledNotification
+                // Only proceed if localization was successful
+                if (title != "Time_To_Take" && message != "Take_Amount_Of")
                 {
-                    NotificationId = notificationId,
-                    ScheduleTime = scheduleTime,
-                    Title = title,
-                    Message = message,
-                    RepeatDays = repeatDays,
-                    Id = product.Id,
-                    DosageId = dosage.Id
-                });
+                    // Add the new notification with localized text
+                    _scheduledNotifications.Add(new ScheduledNotification
+                    {
+                        NotificationId = notificationId,
+                        ScheduleTime = scheduleTime,
+                        Title = title,
+                        Message = message,
+                        RepeatDays = repeatDays,
+                        Id = product.Id,
+                        DosageId = dosage.Id
+                    });
+                }
 
 #if ANDROID
-                // Also schedule system alarm for reliable background notifications
-                ScheduleAndroidAlarm(product, dosage, scheduleTime, notificationId, title, message);
+                    // Also schedule system alarm for reliable background notifications
+                    ScheduleAndroidAlarm(product, dosage, scheduleTime, notificationId, title, message);
 #endif
             }
             finally

@@ -1,0 +1,77 @@
+﻿@page "/debug"
+@using System.Text.Json
+@using System.IO
+@inject IJSRuntime JSRuntime
+
+<h3>Debug Information</h3>
+
+<div class="debug-section">
+    <h4>pills.json Content</h4>
+    @if (string.IsNullOrEmpty(_errorMessage))
+    {
+        @if (string.IsNullOrEmpty(_jsonContent))
+        {
+                    <div class="alert alert-info">Loading JSON content...</div>
+        }
+        else
+        {
+                    <div class="json-display">
+                        <pre>@_formattedJson</pre>
+                    </div>
+        }
+    }
+    else
+    {
+            <div class="alert alert-danger">@_errorMessage</div>
+    }
+</div>
+
+<style>
+    .debug-section {
+        margin: 20px 0;
+    }
+    .json-display {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 15px;
+        overflow-x: auto;
+    }
+    pre {
+        margin: 0;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+</style>
+
+@code {
+    private string _jsonContent = string.Empty;
+    private string _formattedJson = string.Empty;
+    private string _errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var filePath = Path.Combine(FileSystem.AppDataDirectory, "pills.json");
+
+            if (File.Exists(filePath))
+            {
+                _jsonContent = await File.ReadAllTextAsync(filePath);
+
+                // Format JSON for better readability
+                var jsonDocument = JsonDocument.Parse(_jsonContent);
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                _formattedJson = JsonSerializer.Serialize(jsonDocument, options);
+            }
+            else
+            {
+                _errorMessage = "pills.json file not found in AppDataDirectory";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error loading JSON file: {ex.Message}";
+        }
+    }
+}

@@ -272,8 +272,9 @@ public class ProductService : IProductService
                         }
                     }
 
-                    // Calculate and set next dose time
-                    dosage.NextDose = CalculateNextDoseTime(dosage, DateTime.Now);
+                    // Calculate and set next dose time based on the scheduled time (not current time)
+                    // This ensures proper scheduling even if taking tomorrow's dose today
+                    dosage.NextDose = CalculateNextDoseTime(dosage, scheduleTime ?? DateTime.Now);
                 }
             }
 
@@ -408,7 +409,8 @@ public class ProductService : IProductService
                 var dosage = product.Dosages.FirstOrDefault(d => d.Id == history.DosageId.Value);
                 if (dosage != null)
                 {
-                    dosage.NextDose = CalculateNextDoseTime(dosage, history.Timestamp);
+                    // Use the scheduled time rather than timestamp for calculating next dose
+                    dosage.NextDose = CalculateNextDoseTime(dosage, history.ScheduleTime ?? history.Timestamp);
                 }
             }
 
@@ -469,7 +471,7 @@ public class ProductService : IProductService
         if (lastTakenTime == null)
         {
             // If today's dose time is already past, schedule for next occurrence
-            if (baseTime < now)
+            if (baseTime < DateTime.Now)
             {
                 if (dosage.Frequency == "Days")
                 {
@@ -486,7 +488,7 @@ public class ProductService : IProductService
         }
         else
         {
-            // We have a record of when this product was last taken
+            // We have a record of when this product was last taken or scheduled
             DateTime lastTaken = lastTakenTime.Value;
 
             // Calculate the next dose based on frequency and repetition
@@ -505,14 +507,14 @@ public class ProductService : IProductService
                     0);
 
                 // If the calculated time is in the past, schedule for the next cycle
-                if (nextDose < now)
+                if (nextDose < DateTime.Now)
                 {
-                    int daysToAdd = dosage.Repetition - (int)(now - nextDose).TotalDays % dosage.Repetition;
-                    if (daysToAdd == 0 || (now - nextDose).TotalDays % dosage.Repetition == 0)
+                    int daysToAdd = dosage.Repetition - (int)(DateTime.Now - nextDose).TotalDays % dosage.Repetition;
+                    if (daysToAdd == 0 || (DateTime.Now - nextDose).TotalDays % dosage.Repetition == 0)
                     {
                         daysToAdd = dosage.Repetition;
                     }
-                    nextDose = now.Date.AddDays(daysToAdd);
+                    nextDose = DateTime.Now.Date.AddDays(daysToAdd);
 
                     // Reset time component
                     nextDose = new DateTime(
@@ -537,9 +539,9 @@ public class ProductService : IProductService
                 nextWeeklyDose = nextWeeklyDose.AddDays(weeksToAdd);
 
                 // If the calculated time is in the past, find the next occurrence
-                if (nextWeeklyDose < now)
+                if (nextWeeklyDose < DateTime.Now)
                 {
-                    nextWeeklyDose = FindNextWeekdayOccurrence(now, dosage.SelectedDays);
+                    nextWeeklyDose = FindNextWeekdayOccurrence(DateTime.Now, dosage.SelectedDays);
                 }
 
                 // Set the time part from the dosage's scheduled time
@@ -656,7 +658,7 @@ public class ProductService : IProductService
         var dosage = product.Dosages.FirstOrDefault(d => d.Id == missedDosage.DosageId);
         if (dosage != null)
         {
-            dosage.NextDose = CalculateNextDoseTime(dosage, DateTime.Now);
+            dosage.NextDose = CalculateNextDoseTime(dosage, missedDosage.ScheduledTime);
         }
 
         // Save changes

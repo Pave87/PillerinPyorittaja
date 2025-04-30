@@ -259,4 +259,7 @@
 	<data name="No" xml:space="preserve">
 		<value>Ei</value>
 	</data>
+	<data name="Due_Now" xml:space="preserve">
+		<value>Nyt</value>
+	</data>
 </root>
