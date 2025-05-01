@@ -340,5 +340,10 @@
 	<data name="Dose_Taken_Successfully" xml:space="preserve">
 		<value>Annos otettu</value>
 	</data>
-	
+	<data name="Update_Notes" xml:space="preserve">
+		<value>Päivityksen tiedot</value>
+	</data>
+	<data name="History" xml:space="preserve">
+		<value>Historia</value>
+	</data>	
 </root>
