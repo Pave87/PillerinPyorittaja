@@ -82,6 +82,7 @@
     </ItemGroup>
 	<ItemGroup Condition="$(TargetFramework.Contains('android'))">
 		<PackageReference Include="Xamarin.AndroidX.Core" Version="1.15.0.2" />
+		<PackageReference Include="Xamarin.GooglePlayServices.Ads" Version="122.3.0.1" />
 	</ItemGroup>
 	<ItemGroup>
    <Compile Update="Resources\Localization\AppResources.Designer.cs">

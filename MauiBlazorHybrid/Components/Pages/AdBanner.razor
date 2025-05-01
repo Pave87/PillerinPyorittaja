@@ -1,0 +1,110 @@
+﻿@using MauiBlazorHybrid.Services
+@inject IAdService AdService
+@implements IDisposable
+
+<div class="ad-banner-container" style="padding-bottom: @(isAdLoaded ? "60px" : "0px")">
+    <div class="ad-banner @(isAdLoaded ? "ad-banner-visible" : "")">
+        @if (AdService.IsAdBannerReady)
+        {
+                <div class="maui-ad-container" @ref="AdBannerRef"></div>
+        }
+        else
+        {
+                <div class="ad-loading">Loading advertisement...</div>
+        }
+    </div>
+</div>
+
+<style>
+    .ad-banner-container {
+        position: relative;
+        width: 100%;
+        transition: padding-bottom 0.3s ease;
+    }
+
+    .ad-banner {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background-color: #f8f9fa;
+        border-top: 1px solid #dee2e6;
+        padding: 5px 0;
+        z-index: 900;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 60px;
+        transform: translateY(100%);
+        transition: transform 0.3s ease;
+    }
+
+    .ad-banner-visible {
+        transform: translateY(0);
+    }
+
+    .maui-ad-container {
+        width: 320px;
+        height: 50px;
+    }
+
+    .ad-loading {
+        color: #6c757d;
+        font-size: 0.8rem;
+    }
+</style>
+
+@code {
+    private ElementReference AdBannerRef;
+    private bool isAdLoaded = false;
+    private System.Timers.Timer? adInitTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await AdService.InitializeAdsAsync();
+
+        // Use a timer to check if ads are ready
+        adInitTimer = new System.Timers.Timer(500);
+        adInitTimer.Elapsed += async (sender, e) =>
+        {
+            if (AdService.IsAdBannerReady)
+            {
+                adInitTimer?.Stop();
+                adInitTimer?.Dispose();
+                adInitTimer = null;
+
+                isAdLoaded = true;
+                await InvokeAsync(StateHasChanged);
+            }
+        };
+        adInitTimer.Start();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await AdService.LoadBannerAdAsync(AdBannerRef);
+
+            // Set a small delay and try loading again if needed
+            await Task.Delay(1000);
+            if (!AdService.IsAdBannerReady)
+            {
+                await AdService.LoadBannerAdAsync(AdBannerRef);
+
+                // Force update if ad is ready
+                if (AdService.IsAdBannerReady && !isAdLoaded)
+                {
+                    isAdLoaded = true;
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        adInitTimer?.Dispose();
+    }
+}
+
