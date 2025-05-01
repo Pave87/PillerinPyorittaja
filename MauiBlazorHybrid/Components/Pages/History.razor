@@ -1,10 +1,32 @@
 ﻿@page "/history"
 @using MauiBlazorHybrid.Models
 @using MauiBlazorHybrid.Services
+@using Microsoft.JSInterop
+@using CommunityToolkit.Maui.Alerts
+@using CommunityToolkit.Maui.Core
 @inject IProductService ProductService
+@inject IJSRuntime JS
 @inherits MauiBlazorHybrid.Extensions.LocalizeComponent
 
 <h3>@L("History")</h3>
+
+@if (showDeleteConfirmation)
+{
+    <div class="popup-overlay @(isDeletePopupVisible ? "overlay-visible" : "")" @onclick="HideDeleteConfirmation"></div>
+    <div class="in-page-popup @(isDeletePopupVisible ? "popup-visible" : "")">
+        <div class="popup-header">
+            <span class="popup-title">@L("Confirm_Delete_History")</span>
+            <button class="popup-close" @onclick="HideDeleteConfirmation">×</button>
+        </div>
+        <div class="popup-body">
+            <p>@L("Are_You_Sure_Delete_History_Record")</p>
+            <div class="popup-actions">
+                <button class="popup-button-no" @onclick="HideDeleteConfirmation">@L("No")</button>
+                <button class="popup-button-yes" @onclick="ConfirmDeleteHistoryRecord">@L("Yes")</button>
+            </div>
+        </div>
+    </div>
+}
 
 <div class="filter-container">
     <div class="filter-group">
@@ -17,20 +39,6 @@
             }
         </select>
     </div>
-
-    @if (selectedProductId > 0 && selectedProduct != null)
-    {
-        <div class="filter-group">
-            <label for="dosageFilter">@L("Dosage"):</label>
-            <select id="dosageFilter" class="filter-select" @bind="selectedDosageId">
-                <option value="0">@L("All_Dosages")</option>
-                @foreach (var dosage in selectedProduct.Dosages)
-                {
-                    <option value="@dosage.Id">@FormatDosageInfo(dosage)</option>
-                }
-            </select>
-        </div>
-    }
 
     <button class="filter-button" @onclick="ApplyFilters">@L("Apply_Filters")</button>
 </div>
@@ -51,19 +59,31 @@ else
             <div class="history-item">
                 <div class="history-product">
                     <span class="product-name">@GetProductName(historyItem.ProductId)</span>
-                    <span class="history-amount">@historyItem.AmountTaken @GetProductUnit(historyItem.ProductId)</span>
+                    @if (historyItem.Event == EventType.Taken)
+                    {
+                        <span class="history-amount">@historyItem.AmountTaken @GetProductUnit(historyItem.ProductId)</span>
+                    }
                 </div>
                 <div class="history-time">
-                    <span class="history-date">@historyItem.Timestamp.ToString("d MMM yyyy")</span>
-                    <span class="history-time-value">@historyItem.Timestamp.ToString("HH:mm")</span>
+                    @if (historyItem.Event == EventType.Taken || historyItem.Event == EventType.Skipped)
+                    {
+                        <span class="history-time-value">@L("Taken"): @historyItem.Timestamp.ToString("d MMM yyyy HH:mm")</span>
+                        <span class="history-schedule-time">@L("Scheduled"): @(historyItem.ScheduleTime?.ToString("d MMM yyyy HH:mm") ?? "--:--")</span>
+                    }
+                    else
+                    {
+                        <span class="history-time-value">@historyItem.Timestamp.ToString("d MMM yyyy HH:mm")</span>
+                    }
                 </div>
                 <div class="history-event">
-                    <span class="event-type @GetEventTypeClass(historyItem.Event)">@FormatEventType(historyItem.Event)</span>
+                    <button class="event-type-button @GetEventTypeClass(historyItem.Event)" @onclick="() => ShowDeleteConfirmation(historyItem.Id, historyItem.ProductId)">
+                        @FormatEventType(historyItem.Event)
+                    </button>
                 </div>
             </div>
         }
     </div>
-
+}
 
 <style>
     .filter-container {
@@ -106,7 +126,7 @@ else
         gap: 0.75rem;
     }
 
-    .history-item {
+/*     .history-item {
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -114,12 +134,31 @@ else
         background-color: #f8f9fa;
         border-radius: 8px;
         border-left: 4px solid #17a2b8;
+    } */
+    .history-item {
+        display: flex;
+        justify-content: flex-start; /* Changed from space-between */
+        align-items: center;
+        padding: 0.75rem;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #17a2b8;
+        gap: 0.8rem; /* Added explicit gap between items */
     }
 
+
+/*     .history-product {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+    } */
     .history-product {
         display: flex;
         flex-direction: column;
+        width: 20%; /* Set explicit width instead of using flex */
+        min-width: 60px;
     }
+
 
     .product-name {
         font-weight: bold;
@@ -131,11 +170,20 @@ else
         color: #6c757d;
     }
 
-    .history-time {
+/*     .history-time {
         display: flex;
         flex-direction: column;
         align-items: center;
+        flex: 1;
+    } */
+    .history-time {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start; /* Left align text instead of center */
+        width: 50%; /* Set explicit width */
+        padding-left: 0.5rem;
     }
+
 
     .history-date {
         font-size: 0.9rem;
@@ -145,19 +193,37 @@ else
         font-weight: 500;
     }
 
+    .history-schedule-time {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+
+/*     .history-event {
+        min-width: 80px;
+        text-align: center;
+    } */
     .history-event {
+        margin-left: auto; /* Push to the right side */
         min-width: 80px;
         text-align: center;
     }
 
-    .event-type {
+
+    .event-type-button {
         padding: 0.25rem 0.5rem;
         border-radius: 4px;
         font-size: 0.8rem;
         font-weight: 500;
+        border: none;
+        cursor: pointer;
+        transition: opacity 0.2s;
     }
 
-    .event-usage {
+        .event-type-button:hover {
+            opacity: 0.8;
+        }
+
+    .event-usage, .event-taken {
         background-color: #d1e7dd;
         color: #146c43;
     }
@@ -187,6 +253,98 @@ else
         color: #495057;
     }
 
+    /* Custom popup styles */
+    .popup-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+    }
+
+    .overlay-visible {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .in-page-popup {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.9);
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        width: 90%;
+        max-width: 400px;
+        opacity: 0;
+        transition: all 0.3s ease;
+        pointer-events: none;
+    }
+
+    .popup-visible {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .popup-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .popup-title {
+        font-weight: 600;
+        font-size: 1.2rem;
+    }
+
+    .popup-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 0;
+        color: #6c757d;
+    }
+
+    .popup-body {
+        padding: 16px;
+    }
+
+    .popup-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 16px;
+    }
+
+    .popup-button-yes,
+    .popup-button-no {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 500;
+    }
+
+    .popup-button-yes {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .popup-button-no {
+        background-color: #6c757d;
+        color: white;
+    }
 </style>
 
 @code {
@@ -196,6 +354,12 @@ else
     private int selectedProductId = 0; // 0 means "All Products"
     private int selectedDosageId = 0; // 0 means "All Dosages" for the selected product
     private Product? selectedProduct = null;
+
+    // Custom popup state variables
+    private bool showDeleteConfirmation = false;
+    private bool isDeletePopupVisible = false;
+    private int pendingDeleteHistoryId;
+    private int pendingDeleteProductId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -262,7 +426,7 @@ else
     private string FormatDosageInfo(DosageSchedule dosage)
     {
         string timeInfo = dosage.Time?.ToString("HH:mm") ?? "--:--";
-        
+
         if (dosage.Frequency == "Days")
         {
             return $"{timeInfo}, every {dosage.Repetition} day(s)";
@@ -272,7 +436,7 @@ else
             string days = string.Join(", ", dosage.SelectedDays);
             return $"{timeInfo}, {days}, every {dosage.Repetition} week(s)";
         }
-        
+
         return $"{timeInfo}";
     }
 
@@ -294,5 +458,78 @@ else
     {
         return $"event-{eventType.ToString().ToLower()}";
     }
-}
+
+    // Show the custom delete confirmation popup
+    private async Task ShowDeleteConfirmation(int historyId, int productId)
+    {
+        pendingDeleteHistoryId = historyId;
+        pendingDeleteProductId = productId;
+
+        // First set the popup to be rendered
+        showDeleteConfirmation = true;
+
+        // Force immediate UI update
+        StateHasChanged();
+
+        // Use a small delay to ensure DOM has been updated
+        await Task.Delay(50);
+
+        // Then make it visible with animation
+        isDeletePopupVisible = true;
+        StateHasChanged();
+    }
+
+    // Hide the custom delete confirmation popup
+    private async Task HideDeleteConfirmation()
+    {
+        // Start the hiding animation
+        isDeletePopupVisible = false;
+        StateHasChanged();
+
+        // Wait for animation to complete
+        await Task.Delay(300);
+
+        // Remove from DOM
+        showDeleteConfirmation = false;
+        StateHasChanged();
+    }
+
+    // Process the deletion after confirmation
+    private async Task ConfirmDeleteHistoryRecord()
+    {
+        try
+        {
+            // Get the product
+            var product = await ProductService.GetProductAsync(pendingDeleteProductId);
+
+            if (product != null)
+            {
+                // Find and remove the history record
+                var historyToRemove = product.History.FirstOrDefault(h => h.Id == pendingDeleteHistoryId);
+                if (historyToRemove != null)
+                {
+                    product.History.Remove(historyToRemove);
+
+                    // Save the updated product
+                    await ProductService.UpdateProductAsync(product);
+
+                    // Refresh the history list
+                    await LoadData();
+                    await ApplyFilters();
+                    var toast = Toast.Make(L("History_Record_Deleted"), ToastDuration.Short);
+                    await toast.Show();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            var toast = Toast.Make($"{L("Error")}: {ex.Message}", ToastDuration.Long);
+            await toast.Show();
+
+        }
+        finally
+        {
+            await HideDeleteConfirmation();
+        }
+    }
 }

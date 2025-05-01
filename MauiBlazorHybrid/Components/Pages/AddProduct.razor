@@ -34,6 +34,10 @@
     @foreach (var (dosage, index) in Dosages.Select((d, i) => (d, i)))
     {
         <div class="dosage-row">
+            <div class="dosage-header">
+                <button type="button" class="btn-delete-dosage" @onclick="() => DeleteDosageRow(dosage)">@L("Delete_Dosage")</button>
+            </div>
+
             <div class="form-group">
                 <label>@L("Time"):</label>
                 <input type="time"
@@ -188,6 +192,22 @@
     button:hover {
     opacity: 0.9;
     }
+
+    .dosage-header {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 0.5rem;
+    }
+
+    .btn-delete-dosage {
+        padding: 0.4rem 0.8rem;
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
 </style>
 
 @code {
@@ -227,6 +247,20 @@
                             AmountTaken = d.AmountTaken
                         }).ToList();
 
+                    // Populate _originalDosages dictionary for later comparison
+                    _originalDosages = product.Dosages.ToDictionary(
+                        d => d.Id,
+                        d => new DosageSchedule
+                            {
+                                Id = d.Id,
+                                ProductId = d.ProductId,
+                                Time = d.Time,
+                                Repetition = d.Repetition,
+                                Frequency = d.Frequency,
+                                SelectedDays = d.SelectedDays?.ToList(), // Create a new list to avoid reference issues
+                                AmountTaken = d.AmountTaken
+                            }
+                    );
                     // Set the next dosage ID based on existing dosages
                     _nextDosageId = Dosages.Any() ? Dosages.Max(d => d.Id) + 1 : 1;
                 }
@@ -403,6 +437,15 @@
         {
             Console.WriteLine($"Error saving product: {ex.Message}");
         }
+    }
+
+    private void DeleteDosageRow(DosageSchedule dosage)
+    {
+        // Remove the dosage from the list
+        Dosages.Remove(dosage);
+
+
+        StateHasChanged();
     }
 
     private void Cancel()

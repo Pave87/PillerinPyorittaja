@@ -2,6 +2,7 @@
 @using MauiBlazorHybrid.Services
 @using MauiBlazorHybrid.Extensions
 @inject ILocalizationService LocalizationService
+@inject ISettingsService SettingsService
 @inherits LocalizeComponent
 
 <h1>@L("Settings")</h1>
@@ -19,9 +20,17 @@
         </div>
     </div>
 
-    <div class="setting-info">
-        <p>@L("Language_Change_Info")</p>
+    <div class="setting-card">
+        <h2>@L("Debug")</h2>
+        <div class="setting-option">
+            <label class="debug-checkbox-label">
+                <input type="checkbox" @bind="IsDebugEnabled" />
+                <span>@L("Debug_Mode")</span>
+            </label>
+        </div>
+        <span>@L("Needs_Restart")</span>
     </div>
+
 </div>
 
 <style>
@@ -79,6 +88,14 @@
             {
                 LocalizationService.SetCultureAsync(value);
             }
+        }
+    }
+    private bool IsDebugEnabled
+    {
+        get => SettingsService.IsDebugEnabled;
+        set
+        {
+            SettingsService.IsDebugEnabled = value;
         }
     }
 }

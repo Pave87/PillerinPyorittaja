@@ -148,23 +148,44 @@
 	<data name="Mon" xml:space="preserve">
 		<value>Ma</value>
 	</data>
+	<data name="Monday" xml:space="preserve">
+		<value>Maanantai</value>
+	</data>
 	<data name="Tue" xml:space="preserve">
 		<value>Ti</value>
+	</data>
+	<data name="Tuesday" xml:space="preserve">
+		<value>Tiistai</value>
 	</data>
 	<data name="Wed" xml:space="preserve">
 		<value>Ke</value>
 	</data>
+	<data name="Wednesday" xml:space="preserve">
+		<value>Keskviikko</value>
+	</data>
 	<data name="Thu" xml:space="preserve">
 		<value>To</value>
+	</data>
+	<data name="Thursday" xml:space="preserve">
+		<value>Torstai</value>
 	</data>
 	<data name="Fri" xml:space="preserve">
 		<value>Pe</value>
 	</data>
+	<data name="Friday" xml:space="preserve">
+		<value>Perjantai</value>
+	</data>
 	<data name="Sat" xml:space="preserve">
 		<value>La</value>
 	</data>
+	<data name="Saturday" xml:space="preserve">
+		<value>lauantai</value>
+	</data>
 	<data name="Sun" xml:space="preserve">
 		<value>Su</value>
+	</data>
+	<data name="Sunday" xml:space="preserve">
+		<value>Sunnuntai</value>
 	</data>
 	<data name="Add_Another_Dosage" xml:space="preserve">
 		<value>Lisää uusi annos</value>
@@ -251,7 +272,7 @@
 		<value>Vahvista varhainen annos</value>
 	</data>
 	<data name="Early_Dose_Message" xml:space="preserve">
-		<value>Oletko varma, että haluat ottaa {productName} annoksen {scheduledTime} jo nyt?</value>
+		<value>Oletko varma, että haluat jo nyt ottaa {productName} annoksen jonka aika on {scheduledTime}?</value>
 	</data>
 	<data name="Yes" xml:space="preserve">
 		<value>Kyllä</value>
@@ -262,4 +283,62 @@
 	<data name="Due_Now" xml:space="preserve">
 		<value>Nyt</value>
 	</data>
+	<data name="All_Products" xml:space="preserve">
+		<value>Kaikki</value>
+	</data>
+	<data name="Apply_Filters" xml:space="preserve">
+		<value>Päivitä</value>
+	</data>
+	<data name="Confirm_Delete_History" xml:space="preserve">
+		<value>Vahvista tapahtuman poisto</value>
+	</data>
+	<data name="Are_You_Sure_Delete_History_Record" xml:space="preserve">
+		<value>Haluatko varmasti poistaa tämän tapahtuman?</value>
+	</data>
+	<data name="Taken" xml:space="preserve">
+		<value>Otettu</value>
+	</data>
+	<data name="Scheduled" xml:space="preserve">
+		<value>Suunniteltu</value>
+	</data>
+	<data name="Skipped" xml:space="preserve">
+		<value>Ei otettu</value>
+	</data>
+	<data name="Created" xml:space="preserve">
+		<value>Luotu</value>
+	</data>
+	<data name="Modified" xml:space="preserve">
+		<value>Muokattu</value>
+	</data>
+	<data name="Refilled" xml:space="preserve">
+		<value>Täydennetty</value>
+	</data>
+	<data name="Removed" xml:space="preserve">
+		<value>Poistettu</value>
+	</data>
+	<data name="Confirm_Delete_Product" xml:space="preserve">
+		<value>Vahvista tuotteen poistaminen</value>
+	</data>
+	<data name="Are_You_Sure_Delete_Product" xml:space="preserve">
+		<value>Oletko varma että haluat poistaa tuotteen?</value>
+	</data>
+	<data name="No_History_Found" xml:space="preserve">
+		<value>Historia dataa ei vielä ole</value>
+	</data>
+	<data name="Debug" xml:space="preserve">
+		<value>Debug</value>
+	</data>
+	<data name="Debug_Mode" xml:space="preserve">
+		<value>Debug päälle</value>
+	</data>
+	<data name="Needs_Restart" xml:space="preserve">
+		<value>Ohjelma pitää käynnistää uudelleen jotta tämä tulee voimaan!</value>
+	</data>
+	<data name="Close" xml:space="preserve">
+		<value>Sulje</value>
+	</data>
+	<data name="Dose_Taken_Successfully" xml:space="preserve">
+		<value>Annos otettu</value>
+	</data>
+	
 </root>

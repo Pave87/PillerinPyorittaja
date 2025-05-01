@@ -11,6 +11,29 @@
 @inject IJSRuntime JS
 @inherits MauiBlazorHybrid.Extensions.LocalizeComponent
 
+@if (showVersionPopup)
+{
+    <div class="popup-overlay @(isVersionPopupVisible ? "overlay-visible" : "")"></div>
+    <div class="in-page-popup @(isVersionPopupVisible ? "popup-visible" : "")">
+        <div class="popup-header">
+            <span class="popup-title">@L("Update_Notes")</span>
+            <button class="popup-close" @onclick="HideVersionPopup">×</button>
+        </div>
+        <div class="popup-body">
+            <h3>Version 0.3 päivitykset</h3>
+            <ul>
+                <li>Kun otat annoksen tulee pieni ilmoitus että annos otettu</li>
+                <li>Jos koitat ottaa annosta joka yli 3h tulevaisuudessa kysytään vahvistus</li>
+                <li>Tuotteen poisto vahvistus popup korjattu</li>
+                <li>Tuotteelta voi poistaa yksittäisen annoksen ajoituksen</li>
+                <li>Korjattu annosten aikataulujen laskentaa</li>
+                <li>Historia sivulla voit katsoa/poistaa tapahtumia</li>
+            </ul>
+        </div>
+        <button class="take-product-button" @onclick="HideVersionPopup">@L("Close")</button>
+    </div>
+}
+
 @if (showConfirmationPopup)
 {
     <div class="popup-overlay @(isConfirmationPopupVisible ? "overlay-visible" : "")" @onclick="HideConfirmationPopup"></div>
@@ -362,6 +385,12 @@ else
     private bool isConfirmationPopupVisible = false;
     private PendingConfirmation pendingConfirmation = new();
 
+    // Version check fields
+    private bool showVersionPopup = false;
+    private bool isVersionPopupVisible = false;
+    private const int EXPECTED_VERSION = 2; // The expected version number
+    private string versionFilePath = string.Empty;
+
     // Class to store information about upcoming doses
     private class UpcomingDose
     {
@@ -396,10 +425,101 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        // Check version file first
+        await CheckVersionFile();
+
         await CheckNotificationPermission();
         await LoadProducts();
         await LoadMissedDosages();
         await OrganizeUpcomingDoses();
+    }
+
+    private async Task CheckVersionFile()
+    {
+        try
+        {
+            // Get the app's local storage path
+            string appDataPath = FileSystem.AppDataDirectory;
+            versionFilePath = Path.Combine(appDataPath, "vers");
+            
+            bool fileExists = File.Exists(versionFilePath);
+            bool versionMatches = false;
+            
+            if (fileExists)
+            {
+                // Read the version number from file
+                string versionText = await File.ReadAllTextAsync(versionFilePath);
+                if (int.TryParse(versionText.Trim(), out int currentVersion))
+                {
+                    versionMatches = (currentVersion == EXPECTED_VERSION);
+                }
+            }
+            
+            if (!fileExists || !versionMatches)
+            {
+                // Show the version popup
+                await ShowVersionPopup();
+                
+                // Immediately update the version file (without waiting for user action)
+                await UpdateVersionFile();
+            }
+        }
+        catch (Exception ex)
+        {
+            // Handle any exceptions (optional)
+            Console.WriteLine($"Error checking version file: {ex.Message}");
+        }
+    }
+    
+    private async Task UpdateVersionFile()
+    {
+        try
+        {
+            // Ensure directory exists
+            string directory = Path.GetDirectoryName(versionFilePath);
+            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+            
+            // Write the expected version to file
+            await File.WriteAllTextAsync(versionFilePath, EXPECTED_VERSION.ToString());
+        }
+        catch (Exception ex)
+        {
+            // Handle error (optional)
+            Console.WriteLine($"Error writing version file: {ex.Message}");
+        }
+    }
+    
+    private async Task ShowVersionPopup()
+    {
+        // First set the popup to be rendered
+        showVersionPopup = true;
+        
+        // Force immediate UI update
+        StateHasChanged();
+        
+        // Use a small delay before showing the animation to ensure DOM has updated
+        await Task.Delay(50);
+        
+        // Then make it visible with animation
+        isVersionPopupVisible = true;
+        StateHasChanged();
+    }
+    
+    private async Task HideVersionPopup()
+    {
+        // Start the hiding animation
+        isVersionPopupVisible = false;
+        StateHasChanged();
+        
+        // Wait for animation to complete
+        await Task.Delay(300);
+        
+        // Remove from DOM
+        showVersionPopup = false;
+        StateHasChanged();
     }
 
     private async Task LoadProducts()
@@ -627,7 +747,7 @@ else
         // If it's within the next week
         else if ((nextDose.Date - now.Date).TotalDays < 7)
         {
-            return $"{nextDose.ToString("dddd")} {nextDose.ToString("HH:mm")}";
+            return $"{L(nextDose.ToString("dddd"))} {nextDose.ToString("HH:mm")}";
         }
         // Otherwise show the full date
         else
