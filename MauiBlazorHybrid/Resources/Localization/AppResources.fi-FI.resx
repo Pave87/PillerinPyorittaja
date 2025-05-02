@@ -379,4 +379,13 @@
 	<data name="Amount" xml:space="preserve">
 		<value>Määrä</value>
 	</data>
+	<data name="Low_Limit" xml:space="preserve">
+		<value>Loppumis varoitus</value>
+	</data>
+	<data name="Low_Quantity" xml:space="preserve">
+		<value>Tuote vähissä!</value>
+	</data>
+	<data name="Delete_Dosage" xml:space="preserve">
+		<value>Poista annos</value>
+	</data>
 </root>
