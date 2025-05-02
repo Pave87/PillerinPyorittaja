@@ -28,6 +28,7 @@
                 <li>Tuotteelta voi poistaa yksittäisen annoksen ajoituksen</li>
                 <li>Korjattu annosten aikataulujen laskentaa</li>
                 <li>Historia sivulla voit katsoa/poistaa tapahtumia</li>
+                <li>Ilmoituksisa nyt napit ota nyt ja muistuta myöhemmin</li>
             </ul>
         </div>
         <button class="take-product-button" @onclick="HideVersionPopup">@L("Close")</button>
@@ -432,7 +433,43 @@ else
         await LoadProducts();
         await LoadMissedDosages();
         await OrganizeUpcomingDoses();
+
+        await base.OnInitializedAsync();
+    
+        // Check if we have a pending reminder configuration from a notification
+        CheckForPendingReminderConfig();
     }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+{
+    await base.OnAfterRenderAsync(firstRender);
+    
+    if (firstRender)
+    {
+        // Also check after first render to make sure the app is fully loaded
+        CheckForPendingReminderConfig();
+    }
+}
+
+private void CheckForPendingReminderConfig()
+{
+#if ANDROID
+    if (MauiBlazorHybrid.MainActivity.HasPendingReminderConfig)
+    {
+        int productId = MauiBlazorHybrid.MainActivity.PendingProductId;
+        int dosageId = MauiBlazorHybrid.MainActivity.PendingDosageId;
+        
+        if (productId > 0 && dosageId > 0)
+        {
+            // Navigate to the reminder configuration page
+            NavigationManager.NavigateTo($"/reminderconfig/{productId}/{dosageId}");
+            
+            // Clear the pending configuration to avoid duplicate navigation
+            MauiBlazorHybrid.MainActivity.ClearPendingReminderConfig();
+        }
+    }
+#endif
+}
 
     private async Task CheckVersionFile()
     {

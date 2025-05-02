@@ -1,0 +1,233 @@
+@page "/reminderconfig/{ProductId:int}/{DosageId:int}"
+@using MauiBlazorHybrid.Models
+@using MauiBlazorHybrid.Services
+@inject IProductService ProductService
+@inject INotificationService NotificationService
+@inject NavigationManager NavigationManager
+@inherits MauiBlazorHybrid.Extensions.LocalizeComponent
+
+<h1>@L("Configure_Reminder")</h1>
+
+<div class="reminder-config-container">
+    <div class="product-info">
+        @if (product != null)
+        {
+            <h2>@product.Name</h2>
+            @if (dosage != null)
+            {
+                <p>@L("Amount"): @dosage.AmountTaken @product.Unit</p>
+            }
+        }
+        else
+        {
+            <p>@L("Loading")...</p>
+        }
+    </div>
+
+    <div class="time-picker-section">
+        <h3>@L("Select_Reminder_Time")</h3>
+        <div class="time-picker-container">
+            <div class="form-group">
+                <label>@L("Time"):</label>
+                <input type="time"
+                       @bind="selectedTime"
+                       @bind:event="oninput"
+                       class="form-control" />
+            </div>
+        </div>
+    </div>
+
+    <div class="quick-options">
+        <h3>@L("Quick_Options")</h3>
+        <div class="quick-buttons">
+            <button @onclick="@(() => SetTimeFromNow(15))" class="quick-button">@L("In_15_Minutes")</button>
+            <button @onclick="@(() => SetTimeFromNow(30))" class="quick-button">@L("In_30_Minutes")</button>
+            <button @onclick="@(() => SetTimeFromNow(60))" class="quick-button">@L("In_1_Hour")</button>
+            <button @onclick="@(() => SetTimeFromNow(120))" class="quick-button">@L("In_2_Hours")</button>
+        </div>
+    </div>
+
+    <div class="action-buttons">
+        <button class="btn-schedule" @onclick="ScheduleReminder">@L("Schedule_Reminder")</button>
+        <button class="btn-cancel" @onclick="Cancel">@L("Cancel")</button>
+    </div>
+</div>
+
+<style>
+    .reminder-config-container {
+        padding: 1rem;
+        max-width: 500px;
+        margin: 0 auto;
+    }
+
+    .product-info {
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .time-picker-section {
+        margin-bottom: 2rem;
+    }
+
+    .time-picker-container {
+        margin-top: 1rem;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 1.5rem;
+    }
+
+    .date-info {
+        text-align: center;
+        margin-top: 1.5rem;
+        font-weight: bold;
+    }
+
+    .quick-options {
+        margin-bottom: 2rem;
+    }
+
+    .quick-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        justify-content: center;
+    }
+
+    .quick-button {
+        background-color: #6c757d;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+        cursor: pointer;
+    }
+
+    .action-buttons {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .btn-schedule, .btn-cancel {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 4px;
+        font-weight: 500;
+        cursor: pointer;
+        flex: 1;
+    }
+
+    .btn-schedule {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .btn-cancel {
+        background-color: #dc3545;
+        color: white;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public int ProductId { get; set; }
+
+    [Parameter]
+    public int DosageId { get; set; }
+
+    private Product product;
+    private DosageSchedule dosage;
+    private TimeOnly selectedTime;
+    private DateTime selectedDateTime;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Initialize with default time (15 minutes from now)
+        SetTimeFromNow(15);
+
+        // Load product and dosage information
+        await LoadProductAndDosage();
+    }
+
+    private async Task LoadProductAndDosage()
+    {
+        try
+        {
+            product = await ProductService.GetProductAsync(ProductId);
+
+            if (product != null)
+            {
+                dosage = product.Dosages.FirstOrDefault(d => d.Id == DosageId);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading product and dosage: {ex.Message}");
+        }
+    }
+
+    private string GetFormattedDateTime()
+    {
+        // Create a DateTime with the selected time
+        selectedDateTime = DateTime.Today
+            .AddHours(selectedTime.Hour)
+            .AddMinutes(selectedTime.Minute);
+
+        // If the selected time is in the past, add a day to schedule it for tomorrow
+        if (selectedDateTime < DateTime.Now)
+        {
+            selectedDateTime = selectedDateTime.AddDays(1);
+        }
+
+        return selectedDateTime.ToString("g");
+    }
+
+    private void SetTimeFromNow(int minutes)
+    {
+        DateTime targetTime = DateTime.Now.AddMinutes(minutes);
+        selectedTime = TimeOnly.FromDateTime(targetTime);
+        StateHasChanged();
+    }
+
+    private async Task ScheduleReminder()
+    {
+        if (product != null && dosage != null)
+        {
+            try
+            {
+                // Schedule notification for the selected time
+                await NotificationService.ScheduleNotificationAsync(product, dosage, selectedDateTime);
+
+                // Navigate back to the home page (or another appropriate page)
+                NavigationManager.NavigateTo("/");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error scheduling reminder: {ex.Message}");
+            }
+        }
+    }
+
+    private void Cancel()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+}

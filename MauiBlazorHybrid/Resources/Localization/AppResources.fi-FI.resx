@@ -345,5 +345,38 @@
 	</data>
 	<data name="History" xml:space="preserve">
 		<value>Historia</value>
-	</data>	
+	</data>
+	<data name="Error_Taking_Dose" xml:space="preserve">
+		<value>Annoksen ottaminen epäonnistui!</value>
+	</data>
+	<data name="Remind_Later" xml:space="preserve">
+		<value>Aseta muistutus</value>
+	</data>
+	<data name="Configure_Reminder" xml:space="preserve">
+		<value>Aseta muistutus</value>
+	</data>
+	<data name="Select_Reminder_Time" xml:space="preserve">
+		<value>Valitse uusi muistutus aika</value>
+	</data>
+	<data name="Quick_Options" xml:space="preserve">
+		<value>Pika vaihtoehdot</value>
+	</data>
+	<data name="In_15_Minutes" xml:space="preserve">
+		<value>15 minuutin päästä</value>
+	</data>
+	<data name="In_30_Minutes" xml:space="preserve">
+		<value>30 minuutin päästä</value>
+	</data>
+	<data name="In_1_Hour" xml:space="preserve">
+		<value>Tunnin päästä</value>
+	</data>
+	<data name="In_2_Hours" xml:space="preserve">
+		<value>Kahden tunnin päästä</value>
+	</data>
+	<data name="Schedule_Reminder" xml:space="preserve">
+		<value>Aseta muistutus</value>
+	</data>
+	<data name="Amount" xml:space="preserve">
+		<value>Määrä</value>
+	</data>
 </root>
