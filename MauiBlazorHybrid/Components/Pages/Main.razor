@@ -29,6 +29,8 @@
                 <li>Korjattu annosten aikataulujen laskentaa</li>
                 <li>Historia sivulla voit katsoa/poistaa tapahtumia</li>
                 <li>Ilmoituksisa nyt napit ota nyt ja muistuta myöhemmin</li>
+                <li>Tuoteelle voi määrittää rajan loppimises varoitusta varten</li>
+                <li>Tarjolla myös Discord palvelin <a href="https://discord.gg/tXQ8JXuz" target="_blank">https://discord.gg/tXQ8JXuz</a></li>
             </ul>
         </div>
         <button class="take-product-button" @onclick="HideVersionPopup">@L("Close")</button>
@@ -129,6 +131,14 @@ else
                                     <span class="dose-time-info">@FormatNextDoseTime(dose.NextDoseTime)</span>
                                 }
                             </div>
+                                 @{
+                                    // Get the product to check its quantity
+                                    var product = products?.FirstOrDefault(p => p.Id == dose.ProductId);
+                                    if (product != null && product.Quantity <= product.LowLimit && product.LowLimit > 0)
+                                    {
+                                        <span class="low-quantity-warning">@L("Low_Quantity")</span>
+                                    }
+                                }
                         </div>
                         <button class="take-product-button" @onclick="() => HandleUpcomingDoseTake(dose.ProductId, dose.DosageId, dose.AmountTaken, dose.NextDoseTime, dose.ProductName)">@L("Take_Dose")</button>
                     </div>
@@ -143,6 +153,13 @@ else
 }
 
 <style>
+    .low-quantity-warning {
+    color: #ff9800;
+    font-weight: bold;
+    margin-left: 0.5rem;
+    font-size: 0.9rem;
+    }
+
     .dose-combined-info {
         display: flex;
         align-items: center;
@@ -389,7 +406,7 @@ else
     // Version check fields
     private bool showVersionPopup = false;
     private bool isVersionPopupVisible = false;
-    private const int EXPECTED_VERSION = 2; // The expected version number
+    private const int EXPECTED_VERSION = 3; // The expected version number
     private string versionFilePath = string.Empty;
 
     // Class to store information about upcoming doses

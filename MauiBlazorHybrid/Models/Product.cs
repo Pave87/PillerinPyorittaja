@@ -22,6 +22,10 @@ public class Product
     /// </summary>
     public double Quantity { get; set; } = 0;
     /// <summary>
+    /// Notification limit for low quantity.
+    /// </summary>
+    public double LowLimit { get; set; } = 0;
+    /// <summary>
     /// Unit of measurement. Only used for display purposes.
     /// </summary>
     public string Unit { get; set; } = string.Empty;
