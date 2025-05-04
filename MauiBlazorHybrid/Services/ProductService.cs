@@ -9,17 +9,26 @@ public class ProductService : IProductService
     private List<Product> _products = new();
     private readonly INotificationService _notificationService;
 
+    private readonly ILoggerService _loggerService; // Injected logger service
+
     public ProductService(INotificationService notificationService)
     {
+        _loggerService = new LoggerService();
+        _loggerService.Log("Initalizing ProductService...");
+
         _notificationService = notificationService;
         _filePath = Path.Combine(FileSystem.AppDataDirectory, "pills.json");
         LoadProducts();
+
+        _loggerService.Log("ProductService initialized");
     }
 
     public async Task<bool> AddPacketAsync(int productId, double amountToAdd)
     {
         try
         {
+            _loggerService.Log($"Adding {amountToAdd} to product {productId}");
+
             // Get the current product
             var product = await GetProductAsync(productId);
             if (product == null)
@@ -31,17 +40,19 @@ public class ProductService : IProductService
             // Update the product in storage
             await UpdateProductAsync(product);
 
-
+            _loggerService.Log($"Added {amountToAdd} to product {productId}. New quantity: {product.Quantity}");
             return true;
         }
         catch
         {
+            _loggerService.Log($"Failed to add {amountToAdd} to product {productId}");
             return false;
         }
     }
 
     private void LoadProducts()
     {
+        _loggerService.Log("Loading products from file...");
         if (File.Exists(_filePath))
         {
             var json = File.ReadAllText(_filePath);
@@ -61,20 +72,25 @@ public class ProductService : IProductService
                     }
                 }
             }
+            _loggerService.Log($"Loaded {_products.Count} products from file.");
             // Reschedule notifications for all products on load
             foreach (var product in _products)
             {
                 RescheduleNotificationsForProduct(product).ConfigureAwait(false);
             }
+            _loggerService.Log("Notifications rescheduled for all products.");
 
             // Process any missed dosages
             ProcessMissedDosages().ConfigureAwait(false);
         }
+        _loggerService.Log("Products loaded successfully.");
     }
 
     private async Task ProcessMissedDosages()
     {
         DateTime now = DateTime.Now;
+
+        _loggerService.Log("Processing missed dosages...");
 
         foreach (var product in _products)
         {
@@ -102,30 +118,38 @@ public class ProductService : IProductService
             }
         }
 
+        _loggerService.Log("Missed dosages processed.");
         // Save changes
         await SaveProductsAsync();
     }
 
     private async Task SaveProductsAsync()
     {
+        _loggerService.Log("Saving products to file...");
         var json = JsonSerializer.Serialize(_products);
         await File.WriteAllTextAsync(_filePath, json);
+        _loggerService.Log("Products saved successfully.");
     }
 
     public async Task<List<Product>> GetProductsAsync()
     {
+        _loggerService.Log("Fetching products...");
         await ProcessMissedDosages(); // Check for missed dosages before returning products
+        _loggerService.Log($"Fetched {_products.Count} products.");
         return _products;
     }
 
     public async Task<Product?> GetProductAsync(int id)
     {
+        _loggerService.Log($"Fetching product with ID {id}...");
         await ProcessMissedDosages(); // Check for missed dosages
+        _loggerService.Log($"Fetched product with ID {id}.");
         return _products.FirstOrDefault(p => p.Id == id);
     }
 
     public async Task<Product> AddProductAsync(Product product)
     {
+        _loggerService.Log($"Adding new product: {product.Name}");
         product.Id = _products.Count > 0 ? _products.Max(p => p.Id) + 1 : 1;
         product.History ??= new List<UsageHistory>();
         product.MissedDosages ??= new List<MissedDosage>();
@@ -138,15 +162,17 @@ public class ProductService : IProductService
 
         _products.Add(product);
         await SaveProductsAsync();
+        _loggerService.Log($"Product added with ID {product.Id}");
 
         // Schedule notifications for new product
         await ScheduleNotificationsForProduct(product);
-
+        _loggerService.Log($"Scheduled notifications for new product {product.Id}");
         return product;
     }
 
     public async Task UpdateProductAsync(Product product)
     {
+        _loggerService.Log($"Updating product with ID {product.Id}");
         var index = _products.FindIndex(p => p.Id == product.Id);
         if (index != -1)
         {
@@ -190,28 +216,31 @@ public class ProductService : IProductService
                 await SaveProductsAsync();
 
                 // Add debug output
-                System.Diagnostics.Debug.WriteLine($"Scheduling notifications for updated product {product.Id}");
+                _loggerService.Log($"Scheduling notifications for updated product {product.Id}");
 
                 // Schedule new notifications and await it
                 await ScheduleNotificationsForProduct(product);
 
-                System.Diagnostics.Debug.WriteLine($"Notifications scheduled for product {product.Id}");
+                _loggerService.Log($"Notifications scheduled for product {product.Id}");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error updating product notifications: {ex.Message}");
+                _loggerService.Log($"Error updating product notifications: {ex.Message}");
                 throw;
             }
         }
+        _loggerService.Log($"Product with ID {product.Id} updated successfully");
     }
 
     public async Task DeleteProductAsync(int id)
     {
+        _loggerService.Log($"Deleting product with ID {id}");
         // Cancel notifications before deleting
         await _notificationService.CancelNotificationsAsync(id);
 
         _products.RemoveAll(p => p.Id == id);
         await SaveProductsAsync();
+        _loggerService.Log($"Product with ID {id} deleted successfully");
     }
 
     // Explicit implementation of the interface method without optional parameter
@@ -223,6 +252,7 @@ public class ProductService : IProductService
 
     public async Task<bool> TakeProductDoseAsync(int productId, double amount, int? dosageId)
     {
+        _loggerService.Log($"Taking product dose: Product ID {productId}, Amount {amount}, Dosage ID {dosageId}");
         var product = _products.FirstOrDefault(p => p.Id == productId);
         if (product == null) return false;
 
@@ -300,9 +330,10 @@ public class ProductService : IProductService
                 await ScheduleNotificationsForProduct(product);
             }
 
+            _loggerService.Log($"Product dose taken successfully: Product ID {productId}, Amount {amount}, Dosage ID {dosageId}");
             return true;
         }
-
+        _loggerService.Log($"Not enough quantity to take product dose: Product ID {productId}, Amount {amount}");
         return false;
     }
 
@@ -320,6 +351,7 @@ public class ProductService : IProductService
 
     public async Task<bool> SkipMissedDosageAsync(int productId, int missedDosageId)
     {
+        _loggerService.Log($"Skipping missed dosage: Product ID {productId}, Missed Dosage ID {missedDosageId}");
         var product = _products.FirstOrDefault(p => p.Id == productId);
         if (product == null) return false;
 
@@ -347,17 +379,21 @@ public class ProductService : IProductService
         product.MissedDosages.Remove(missedDosage);
 
         await SaveProductsAsync();
+        _loggerService.Log($"Missed dosage skipped successfully: Product ID {productId}, Missed Dosage ID {missedDosageId}");
         return true;
     }
 
     public async Task<List<UsageHistory>> GetProductHistoryAsync(int productId)
     {
+        _loggerService.Log($"Fetching history for product ID {productId}");
         var product = _products.FirstOrDefault(p => p.Id == productId);
+        _loggerService.Log($"Fetched history for product ID {productId}");
         return product?.History?.OrderByDescending(h => h.Timestamp).ToList() ?? new List<UsageHistory>();
     }
 
     public async Task<List<UsageHistory>> GetAllProductHistoryAsync()
     {
+        _loggerService.Log("Fetching all product history...");
         var allHistory = new List<UsageHistory>();
         foreach (var product in _products)
         {
@@ -366,16 +402,19 @@ public class ProductService : IProductService
                 allHistory.AddRange(product.History);
             }
         }
+        _loggerService.Log($"Fetched all product history. Total entries: {allHistory.Count}");
         return allHistory.OrderByDescending(h => h.Timestamp).ToList();
     }
 
     public async Task<List<MissedDosage>> GetMissedDosagesAsync(int? productId = null)
     {
+        _loggerService.Log($"Fetching missed dosages for product ID {productId}");
         await ProcessMissedDosages(); // Make sure missed dosages are up to date
 
         if (productId.HasValue)
         {
             var product = _products.FirstOrDefault(p => p.Id == productId.Value);
+            _loggerService.Log($"Fetched missed dosages for product ID {productId}");
             return product?.MissedDosages?.OrderBy(m => m.ScheduledTime).ToList() ?? new List<MissedDosage>();
         }
         else
@@ -388,12 +427,14 @@ public class ProductService : IProductService
                     allMissedDosages.AddRange(product.MissedDosages);
                 }
             }
+            _loggerService.Log($"Fetched missed dosages for all products. Total missed dosages: {allMissedDosages.Count}");
             return allMissedDosages.OrderBy(m => m.ScheduledTime).ToList();
         }
     }
 
     public async Task AddProductHistoryManuallyAsync(UsageHistory history)
     {
+        _loggerService.Log($"Adding product history manually: Product ID {history.ProductId}, Event {history.Event}");
         var product = _products.FirstOrDefault(p => p.Id == history.ProductId);
         if (product != null)
         {
@@ -423,10 +464,12 @@ public class ProductService : IProductService
                 await ScheduleNotificationsForProduct(product);
             }
         }
+        _loggerService.Log($"Product history added manually: Product ID {history.ProductId}, Event {history.Event}");
     }
 
     private async Task ScheduleNotificationsForProduct(Product product)
     {
+        _loggerService.Log($"Scheduling notifications for product {product.Id}");
         // We'll schedule notifications for each dosage based on its NextDose time
         foreach (var dosage in product.Dosages)
         {
@@ -448,10 +491,12 @@ public class ProductService : IProductService
 
         // Save the updated NextDose times
         await SaveProductsAsync();
+        _loggerService.Log($"Notifications scheduled for product {product.Id}");
     }
 
     private DateTime CalculateNextDoseTime(DosageSchedule dosage, DateTime? lastTakenTime)
     {
+        _loggerService.Log($"Calculating next dose time for product {dosage.ProductId}, Dosage ID {dosage.Id}");
         // Current time to base calculations on
         DateTime now = lastTakenTime ?? DateTime.Now;
 
@@ -484,6 +529,7 @@ public class ProductService : IProductService
                     return FindNextWeekdayOccurrence(baseTime, dosage.SelectedDays);
                 }
             }
+            _loggerService.Log($"Next dose time calculated: {baseTime}");
             return baseTime;
         }
         else
@@ -525,7 +571,7 @@ public class ProductService : IProductService
                         dosageTimeOfDay.Minute,
                         0);
                 }
-
+                _loggerService.Log($"Next dose time calculated: {nextDose}");
                 return nextDose;
             }
             else if (dosage.Frequency == "Weeks" && dosage.SelectedDays?.Any() == true)
@@ -552,11 +598,12 @@ public class ProductService : IProductService
                     dosageTimeOfDay.Hour,
                     dosageTimeOfDay.Minute,
                     0);
-
+                _loggerService.Log($"Next weekly dose time calculated: {nextWeeklyDose}");
                 return nextWeeklyDose;
             }
 
             // Default case, schedule for tomorrow at the dosage time
+            _loggerService.Log($"Defaulting to next day for dosage time: {baseTime.AddDays(1)}");
             return baseTime.AddDays(1);
         }
     }
@@ -609,6 +656,7 @@ public class ProductService : IProductService
 
     private async Task RescheduleNotificationsForProduct(Product pill)
     {
+        _loggerService.Log($"Rescheduling notifications for product {pill.Id}");
         try
         {
             // Cancel any existing notifications
@@ -618,11 +666,13 @@ public class ProductService : IProductService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to reschedule notifications for product {pill.Id}: {ex.Message}");
+            _loggerService.Log($"Failed to reschedule notifications for product {pill.Id}: {ex.Message}");
         }
+        _loggerService.Log($"Notifications rescheduled for product {pill.Id}");
     }
     public async Task<bool> TakeMissedDosage(int productId, int missedDosageId, double amountTaken)
     {
+        _loggerService.Log($"Taking missed dosage: Product ID {productId}, Missed Dosage ID {missedDosageId}, Amount Taken {amountTaken}");
         var product = _products.FirstOrDefault(p => p.Id == productId);
         if (product == null) return false;
 
@@ -668,6 +718,7 @@ public class ProductService : IProductService
         await _notificationService.CancelNotificationsAsync(productId);
         await ScheduleNotificationsForProduct(product);
 
+        _loggerService.Log($"Missed dosage taken successfully: Product ID {productId}, Missed Dosage ID {missedDosageId}");
         return true;
     }
 }

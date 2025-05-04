@@ -25,6 +25,31 @@
     }
 </div>
 
+<div class="debug-section">
+    <div class="log-header">
+        <h4>Log Content</h4>
+        <button class="btn btn-danger" @onclick="ClearLogFile">Clear Log</button>
+    </div>
+    
+    @if (string.IsNullOrEmpty(_logErrorMessage))
+    {
+        @if (string.IsNullOrEmpty(_logContent))
+        {
+            <div class="alert alert-info">Loading log content...</div>
+        }
+        else
+        {
+            <div class="log-display">
+                <pre>@_logContent</pre>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="alert alert-danger">@_logErrorMessage</div>
+    }
+</div>
+
 <style>
     .debug-section {
         margin: 20px 0;
@@ -48,7 +73,16 @@
     private string _formattedJson = string.Empty;
     private string _errorMessage = string.Empty;
 
+    private string _logContent = string.Empty;
+    private string _logErrorMessage = string.Empty;
+
     protected override async Task OnInitializedAsync()
+    {
+        await LoadJsonContent();
+        await LoadLogContent();
+    }
+
+    private async Task LoadJsonContent()
     {
         try
         {
@@ -71,6 +105,54 @@
         catch (Exception ex)
         {
             _errorMessage = $"Error loading JSON file: {ex.Message}";
+        }
+    }
+
+    private async Task LoadLogContent()
+    {
+        try
+        {
+            // Load debug.log
+            var logFilePath = Path.Combine(FileSystem.AppDataDirectory, "debug.log");
+
+            if (File.Exists(logFilePath))
+            {
+                _logContent = await File.ReadAllTextAsync(logFilePath);
+            }
+            else
+            {
+                _logErrorMessage = "debug.log file not found in AppDataDirectory";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logErrorMessage = $"Error loading log file: {ex.Message}";
+        }
+    }
+
+    private async Task ClearLogFile()
+    {
+        try
+        {
+            var logFilePath = Path.Combine(FileSystem.AppDataDirectory, "debug.log");
+
+            if (File.Exists(logFilePath))
+            {
+                // Clear the file by writing an empty string to it
+                await File.WriteAllTextAsync(logFilePath, string.Empty);
+
+                // Reload the log content to show the empty file
+                _logContent = string.Empty;
+                _logErrorMessage = string.Empty;
+            }
+            else
+            {
+                _logErrorMessage = "debug.log file not found in AppDataDirectory";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logErrorMessage = $"Error clearing log file: {ex.Message}";
         }
     }
 }
