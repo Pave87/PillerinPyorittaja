@@ -34,6 +34,8 @@ namespace MauiBlazorHybrid.Services
         private const string ACTION_TAKE_NOW = "take_now_action";
         private const string ACTION_REMIND_LATER = "remind_later_action";
 
+        private readonly ILoggerService _loggerService = new LoggerService();
+
         public NotificationService(ILocalizationService localizationService)
         {
             _localizationService = localizationService;
@@ -449,16 +451,26 @@ namespace MauiBlazorHybrid.Services
                 // by looking at all dosages (assuming we can access them)
                 try
                 {
-                    // Get all dosage IDs for this product
-                    // Since we don't have direct access to the product's dosages here,
-                    // we'll generate a range of possible notification IDs
-
-                    // This assumes notification IDs are in format productId*1000 + dosageId
-                    // and dosageId values are typically 1-999
-                    for (int dosageId = 1; dosageId < 1000; dosageId++)
+                    // Get the product from the ProductService to access its actual dosages
+                    var services = Microsoft.Maui.MauiApplication.Current?.Services;
+                    if (services != null)
                     {
-                        int notificationId = GenerateNotificationId(productId, dosageId);
-                        CancelAndroidAlarm(notificationId);
+                        var productService = services.GetService(typeof(IProductService)) as IProductService;
+                        if (productService != null)
+                        {
+                            var product = await productService.GetProductAsync(productId);
+                            if (product != null && product.Dosages != null)
+                            {
+                                // Only cancel notifications for actual dosages
+                                foreach (var dosage in product.Dosages)
+                                {
+                                    int notificationId = GenerateNotificationId(productId, dosage.Id);
+                                    CancelAndroidAlarm(notificationId);
+                                }
+                                _loggerService.Log($"Canceled {product.Dosages.Count} notifications for product {productId}");
+                                return;
+                            }
+                        }
                     }
                 }
                 catch (System.Exception ex)
