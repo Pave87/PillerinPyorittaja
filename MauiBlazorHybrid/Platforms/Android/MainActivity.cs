@@ -2,6 +2,7 @@
 using Android.Content.PM;
 using Android.OS;
 using Android.Content;
+using MauiBlazorHybrid.Services;
 
 namespace MauiBlazorHybrid
 {
@@ -13,8 +14,11 @@ namespace MauiBlazorHybrid
         public static int PendingProductId { get; private set; }
         public static int PendingDosageId { get; private set; }
 
+        private readonly ILoggerService _loggerService = new LoggerService();
+
         protected override void OnCreate(Bundle savedInstanceState)
         {
+            _loggerService.Log("MainActivity: OnCreate called");
             base.OnCreate(savedInstanceState);
 
             // Process the intent
@@ -23,12 +27,14 @@ namespace MauiBlazorHybrid
 
         protected override void OnNewIntent(Intent intent)
         {
+            _loggerService.Log("MainActivity: OnNewIntent called");
             base.OnNewIntent(intent);
             ProcessIntent(intent);
         }
 
         private void ProcessIntent(Android.Content.Intent intent) // Ensure the correct namespace is used
         {
+            _loggerService.Log("MainActivity: ProcessIntent called");
             if (intent != null && intent.HasExtra("action"))
             {
                 string action = intent.GetStringExtra("action");
@@ -45,7 +51,7 @@ namespace MauiBlazorHybrid
                         PendingProductId = productId;
                         PendingDosageId = dosageId;
 
-                        Console.WriteLine($"MainActivity: Processed intent with productId={productId}, dosageId={dosageId}");
+                        _loggerService.Log($"MainActivity: Processed intent with productId={productId}, dosageId={dosageId}");
                     }
                 }
             }
