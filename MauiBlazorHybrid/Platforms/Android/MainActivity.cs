@@ -3,6 +3,7 @@ using Android.Content.PM;
 using Android.OS;
 using Android.Content;
 using MauiBlazorHybrid.Services;
+using Plugin.LocalNotification;
 
 namespace MauiBlazorHybrid
 {
@@ -10,9 +11,9 @@ namespace MauiBlazorHybrid
     public class MainActivity : MauiAppCompatActivity
     {
         // Static properties to be accessed by the Blazor components
-        public static bool HasPendingReminderConfig { get; private set; }
-        public static int PendingProductId { get; private set; }
-        public static int PendingDosageId { get; private set; }
+        public static bool HasPendingReminderConfig { get; set; }
+        public static int PendingProductId { get; set; }
+        public static int PendingDosageId { get; set; }
 
         private readonly ILoggerService _loggerService = new LoggerService();
 
@@ -20,6 +21,9 @@ namespace MauiBlazorHybrid
         {
             _loggerService.Log("MainActivity: OnCreate called");
             base.OnCreate(savedInstanceState);
+
+            // Set the event listeners for Plugin.LocalNotification
+            Plugin.LocalNotification.LocalNotificationCenter.Current.NotificationActionTapped += Current_NotificationActionTapped;
 
             // Process the intent
             ProcessIntent(Intent);
@@ -32,9 +36,26 @@ namespace MauiBlazorHybrid
             ProcessIntent(intent);
         }
 
+        private void Current_NotificationActionTapped(Plugin.LocalNotification.EventArgs.NotificationActionEventArgs e)
+        {
+            _loggerService.Log($"MainActivity: Notification action tapped - {e.ActionId} from {e.Request.Title}");
+            // The notification service will handle this event
+        }
+
         private void ProcessIntent(Android.Content.Intent intent) // Ensure the correct namespace is used
         {
             _loggerService.Log("MainActivity: ProcessIntent called");
+
+            try
+            {
+                // Just skip the notification plugin's processing for now to avoid the error
+                // We'll handle our custom intents manually
+            }
+            catch (Exception ex)
+            {
+                _loggerService.Log($"Error in ProcessIntent: {ex.Message}");
+            }
+
             if (intent != null && intent.HasExtra("action"))
             {
                 string action = intent.GetStringExtra("action");

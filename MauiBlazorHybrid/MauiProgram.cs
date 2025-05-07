@@ -1,6 +1,7 @@
 ﻿using MauiBlazorHybrid.Services;
 using Microsoft.Extensions.Logging;
 using CommunityToolkit.Maui;
+using Plugin.LocalNotification;
 
 namespace MauiBlazorHybrid
 {
@@ -12,6 +13,7 @@ namespace MauiBlazorHybrid
             builder
                 .UseMauiApp<App>()
                 .UseMauiCommunityToolkit()
+                .UseLocalNotification() // Add this
                 .ConfigureFonts(fonts =>
                 {
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");

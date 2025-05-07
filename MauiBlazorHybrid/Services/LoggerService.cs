@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -28,6 +29,7 @@ namespace MauiBlazorHybrid.Services
             if (true)
             {
                 File.AppendAllText(_logFilePath, $"[{DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss.fff")}] {message}{Environment.NewLine}{Environment.NewLine}");
+                Debug.WriteLine($"[LoggerService] {message}");
             }
         }
     }
