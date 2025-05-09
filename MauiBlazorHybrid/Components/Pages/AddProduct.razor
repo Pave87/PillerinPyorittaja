@@ -35,6 +35,23 @@
         <input id="amountPerPackage" type="number" @bind="AmountPerPackage" min="1" step="1" class="form-control" />
     </div>
 
+    <!-- New ConsumeByNeed Checkbox -->
+    <div class="form-group">
+        <label>
+            <input type="checkbox" @bind="ConsumeByNeed" />
+            @L("Consume_By_Need")
+        </label>
+    </div>
+
+    <!-- Input field for amount consumed by need -->
+    @if (ConsumeByNeed)
+    {
+        <div class="form-group">
+            <label for="consumeByNeedAmount">@L("Amount_Consumed_By_Need"):</label>
+            <input id="consumeByNeedAmount" type="number" @bind="ConsumeByNeedAmount" min="0.1" step="0.1" class="form-control" />
+        </div>
+    }
+
     <h3>@L("Dosages")</h3>
     @foreach (var (dosage, index) in Dosages.Select((d, i) => (d, i)))
     {
@@ -224,6 +241,8 @@
     private double productLowLimit { get; set; } = 0;
     private double AmountPerPackage { get; set; } = 1;
     private string Unit { get; set; } = string.Empty;
+    private bool ConsumeByNeed { get; set; } = false;
+    private double ConsumeByNeedAmount { get; set; } = 0;
     private List<DosageSchedule> Dosages { get; set; } = new();
     private readonly string[] WeekDays = new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
     private int _nextDosageId = 1; // Track next dosage ID
@@ -243,6 +262,8 @@
                     productLowLimit = product.LowLimit;
                     AmountPerPackage = product.AmountPerPackage;
                     Unit = product.Unit;
+                    ConsumeByNeed = product.ConsumeByNeed;
+                    ConsumeByNeedAmount = product.ConsumeByNeed ? product.AmountPerPackage : 0;
                     Dosages = product.Dosages.Select(d => new DosageSchedule
                         {
                             Id = d.Id,
@@ -377,6 +398,11 @@
                     existingProduct.LowLimit = productLowLimit;
                     existingProduct.AmountPerPackage = AmountPerPackage;
                     existingProduct.Unit = Unit;
+                    existingProduct.ConsumeByNeed = ConsumeByNeed;
+                    if (ConsumeByNeed)
+                    {
+                        existingProduct.AmountPerPackage = ConsumeByNeedAmount;
+                    }
 
                     // Process each dosage
                     foreach (var dosage in Dosages)
@@ -420,8 +446,14 @@
                         LowLimit = productLowLimit,
                         AmountPerPackage = AmountPerPackage,
                         Unit = Unit,
-                        Dosages = new List<DosageSchedule>() // Initialize with empty list
+                        Dosages = new List<DosageSchedule>(),
+                        ConsumeByNeed = ConsumeByNeed
                     };
+
+                if (ConsumeByNeed)
+                {
+                    newProduct.AmountPerPackage = ConsumeByNeedAmount;
+                }
 
                 // Add the product first to get its ID
                 var savedProduct = await ProductService.AddProductAsync(newProduct);

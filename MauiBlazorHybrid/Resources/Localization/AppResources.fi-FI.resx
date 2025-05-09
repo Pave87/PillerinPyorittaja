@@ -388,4 +388,16 @@
 	<data name="Delete_Dosage" xml:space="preserve">
 		<value>Poista annos</value>
 	</data>
+	<data name="run_out" xml:space="preserve">
+		<value>Tuote loppu!</value>
+	</data>
+	<data name="Dose_Taken_Successfully" xml:space="preserve">
+		<value>Annot otettu</value>
+	</data>
+	<data name="Consume_By_Need" xml:space="preserve">
+		<value>Otetaan tarvittaessa</value>
+	</data>
+	<data name="Amount_Consumed_By_Need" xml:space="preserve">
+		<value>Tarvittaesssa otettu annos</value>
+	</data>
 </root>

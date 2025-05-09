@@ -388,4 +388,16 @@
 	<data name="Delete_Dosage" xml:space="preserve">
 		<value>Delete Dose</value>
 	</data>
+	<data name="run_out" xml:space="preserve">
+		<value>Out of stock!</value>
+	</data>
+	<data name="Dose_Taken_Successfully" xml:space="preserve">
+		<value>Dose taken</value>
+	</data>
+	<data name="Consume_By_Need" xml:space="preserve">
+		<value>Taken when needed</value>
+	</data>
+	<data name="Amount_Consumed_By_Need" xml:space="preserve">
+		<value>Amount taken when needed</value>
+	</data>
 </root>
