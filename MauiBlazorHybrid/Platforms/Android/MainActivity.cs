@@ -3,27 +3,39 @@ using Android.Content.PM;
 using Android.OS;
 using Android.Content;
 using MauiBlazorHybrid.Services;
-using Plugin.LocalNotification;
 
 namespace MauiBlazorHybrid
 {
+
     [Activity(Theme = "@style/Maui.SplashTheme", MainLauncher = true, ConfigurationChanges = ConfigChanges.ScreenSize | ConfigChanges.Orientation | ConfigChanges.UiMode | ConfigChanges.ScreenLayout | ConfigChanges.SmallestScreenSize | ConfigChanges.Density)]
     public class MainActivity : MauiAppCompatActivity
     {
         // Static properties to be accessed by the Blazor components
-        public static bool HasPendingReminderConfig { get; set; }
-        public static int PendingProductId { get; set; }
-        public static int PendingDosageId { get; set; }
+        public static bool HasPendingReminderConfig { get; private set; }
+        public static int PendingProductId { get; private set; }
+        public static int PendingDosageId { get; private set; }
+        public static bool IsRemindLater { get; private set; }
 
         private readonly ILoggerService _loggerService = new LoggerService();
+
+        private readonly IProductService _productService;
+
+        public MainActivity()
+        {
+            // Initialize default services or leave empty
+        }
+
+        public MainActivity(IProductService productService)
+        {
+            _loggerService.Log("Initializing MainActivity ProductService...");
+            _productService = productService;
+        }
+
 
         protected override void OnCreate(Bundle savedInstanceState)
         {
             _loggerService.Log("MainActivity: OnCreate called");
             base.OnCreate(savedInstanceState);
-
-            // Set the event listeners for Plugin.LocalNotification
-            Plugin.LocalNotification.LocalNotificationCenter.Current.NotificationActionTapped += Current_NotificationActionTapped;
 
             // Process the intent
             ProcessIntent(Intent);
@@ -36,34 +48,19 @@ namespace MauiBlazorHybrid
             ProcessIntent(intent);
         }
 
-        private void Current_NotificationActionTapped(Plugin.LocalNotification.EventArgs.NotificationActionEventArgs e)
-        {
-            _loggerService.Log($"MainActivity: Notification action tapped - {e.ActionId} from {e.Request.Title}");
-            // The notification service will handle this event
-        }
-
         private void ProcessIntent(Android.Content.Intent intent) // Ensure the correct namespace is used
         {
             _loggerService.Log("MainActivity: ProcessIntent called");
-
-            try
-            {
-                // Just skip the notification plugin's processing for now to avoid the error
-                // We'll handle our custom intents manually
-            }
-            catch (Exception ex)
-            {
-                _loggerService.Log($"Error in ProcessIntent: {ex.Message}");
-            }
-
             if (intent != null && intent.HasExtra("action"))
             {
                 string action = intent.GetStringExtra("action");
+                _loggerService.Log($"MainActivity: Intent action: {action}");
 
                 if (action == "edit_reminder")
                 {
                     int productId = intent.GetIntExtra("productId", 0);
                     int dosageId = intent.GetIntExtra("dosageId", 0);
+                    bool remindLater = intent.GetBooleanExtra("remind_later", false);
 
                     if (productId > 0 && dosageId > 0)
                     {
@@ -71,10 +68,25 @@ namespace MauiBlazorHybrid
                         HasPendingReminderConfig = true;
                         PendingProductId = productId;
                         PendingDosageId = dosageId;
+                        IsRemindLater = remindLater;
 
-                        _loggerService.Log($"MainActivity: Processed intent with productId={productId}, dosageId={dosageId}");
+                        _loggerService.Log($"MainActivity: Processed intent with productId={productId}, dosageId={dosageId}, remindLater={remindLater}");
                     }
                 }
+                else if (action == "take_now_action")
+                {
+                    int productId = intent.GetIntExtra("productId", 0);
+                    int dosageId = intent.GetIntExtra("dosageId", 0);
+                    int amount = intent.GetIntExtra("amount", 0);
+
+                    var productService = MauiApplication.Current.Services.GetService<IProductService>();
+                    var products = productService?.GetProductsAsync();
+
+                    var success = productService.TakeProductDoseAsync(productId, amount, dosageId);
+                    _loggerService.Log($"MainActivity: Processed intent with productId={productId}, dosageId={dosageId}, amount={amount}, success={success}");
+
+                }
+
             }
         }
 
@@ -84,6 +96,7 @@ namespace MauiBlazorHybrid
             HasPendingReminderConfig = false;
             PendingProductId = 0;
             PendingDosageId = 0;
+            IsRemindLater = false;
         }
     }
 }

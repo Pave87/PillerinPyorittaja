@@ -41,6 +41,14 @@ public class Product
     /// List of missed usages.
     /// </summary>
     public List<MissedDosage> MissedDosages { get; set; } = new();
+    /// <summary>
+    /// Enable consume by need
+    /// </summary>
+    public bool ConsumeByNeed { get; set; } = false;
+    /// <summary>
+    /// Amount for Consume by need
+    /// </summary>
+    public double ConsumeByNeedAmount { get; set; } = 1.0;
 }
 
 /// <summary>
