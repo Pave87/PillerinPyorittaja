@@ -400,7 +400,16 @@
 	<data name="Amount_Consumed_By_Need" xml:space="preserve">
 		<value>Amount taken when needed</value>
 	</data>
-	<data name="remind_15_action" xml:space="preserve">
+	<data name="Remind_15_Minutes" xml:space="preserve">
 		<value>Remind in 15 minutes</value>
+	</data>
+	<data name="Taken_Past_24H" xml:space="preserve">
+		<value>Taken in past 24 hours</value>
+	</data>
+	<data name="Show_Today_Taken" xml:space="preserve">
+		<value>Show taken doses from past 24 hours</value>
+	</data>
+	<data name="Show_Today_Taken_Description" xml:space="preserve">
+		<value>Show taken</value>
 	</data>
 </root>

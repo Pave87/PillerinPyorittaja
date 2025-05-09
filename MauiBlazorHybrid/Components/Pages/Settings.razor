@@ -21,6 +21,16 @@
     </div>
 
     <div class="setting-card">
+        <h2>@L("Show_Today_Taken")</h2>
+        <div class="setting-option">
+            <label class="debug-checkbox-label">
+                <input type="checkbox" @bind="ShowTodayTaken" />
+                <span>@L("Show_Today_Taken_Description")</span>
+            </label>
+        </div>
+    </div>
+
+    <div class="setting-card">
         <h2>@L("Debug")</h2>
         <div class="setting-option">
             <label class="debug-checkbox-label">
@@ -96,6 +106,15 @@
         set
         {
             SettingsService.IsDebugEnabled = value;
+        }
+    }
+
+    private bool ShowTodayTaken
+    {
+        get => SettingsService.ShowTodayTaken;
+        set
+        {
+            SettingsService.ShowTodayTaken = value;
         }
     }
 }

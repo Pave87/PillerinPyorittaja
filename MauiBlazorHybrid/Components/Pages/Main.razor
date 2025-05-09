@@ -20,16 +20,12 @@
             <button class="popup-close" @onclick="HideVersionPopup">×</button>
         </div>
         <div class="popup-body">
-            <h3>Version 0.3 päivitykset</h3>
+            <h3>Version 0.4 päivitykset</h3>
             <ul>
-                <li>Kun otat annoksen tulee pieni ilmoitus että annos otettu</li>
-                <li>Jos koitat ottaa annosta joka yli 3h tulevaisuudessa kysytään vahvistus</li>
-                <li>Tuotteen poisto vahvistus popup korjattu</li>
-                <li>Tuotteelta voi poistaa yksittäisen annoksen ajoituksen</li>
-                <li>Korjattu annosten aikataulujen laskentaa</li>
-                <li>Historia sivulla voit katsoa/poistaa tapahtumia</li>
-                <li>Ilmoituksisa nyt napit ota nyt ja muistuta myöhemmin</li>
-                <li>Tuoteelle voi määrittää rajan loppimises varoitusta varten</li>
+                <li>Korjattu ilmoituksia, nyt ilmoituksesta painamalla voit määrittää uuden muistutuksen tai käyttää ota nyt ja muistuta 15 minuutin päästä pika vaihtoehtoja</li>
+                <li>Tuotteen voi määrittää myös tarpeen mukaan otettavaksi</li>
+                <li>Asetukissa valinta jos haluat nähdä viimeisen vuorokauden aikana otetut annokset</li>
+                <li>Jos saldo on pienempi kuin jäljellä oleva määrä on tästä ilmoitus etusivulla</li>
                 <li>Tarjolla myös Discord palvelin <a href="https://discord.gg/tXQ8JXuz" target="_blank">https://discord.gg/tXQ8JXuz</a></li>
             </ul>
         </div>
@@ -189,9 +185,54 @@ else
             <p>@L("No_Upcoming_Doses")</p>
         }
     </div>
+    @if (takenDoses.Any())
+    {
+        <div class="today-taken">
+            <h2>@L("Taken_Past_24H")</h2>
+            <div class="today-taken-list">
+                @foreach (var dose in takenDoses.OrderByDescending(d => d.Timestamp))
+                {
+                    var product = products?.FirstOrDefault(p => p.Id == dose.ProductId);
+                    if (product != null)
+                    {
+                        <div class="taken-dose-item">
+                            <div class="dose-info">
+                                <span class="product-name">@product.Name</span>
+                                <span class="dose-detail">@dose.AmountTaken @product.Unit</span>
+                            </div>
+                            <div class="dose-time">
+                                <span>@FormatNextDoseTime(dose.Timestamp)</span>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    }
+
 }
 
 <style>
+
+    .today-taken {
+    margin-bottom: 2rem;
+    }
+
+    .today-taken-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    }
+
+    .taken-dose-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #17a2b8;
+    }
     .run-out-button {
     padding: 0.5rem 0.25rem;
     background-color: #dc3545; /* Red color */
@@ -202,19 +243,19 @@ else
     font-weight: 500;
     margin-left: 0.5rem;
     width: 90px;
-}
+    }
 
-        .consume-by-need {
-        margin-bottom: 2rem;
+    .consume-by-need {
+    margin-bottom: 2rem;
     }
 
     .consume-by-need-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
     }
 
-.consume-by-need-item {
+    .consume-by-need-item {
     display: flex;
     flex-direction: column; /* Stack elements vertically */
     gap: 0.5rem;
@@ -222,11 +263,11 @@ else
     background-color: #f8f9fa;
     border-radius: 8px;
     border-left: 4px solid #17a2b8;
-}
+    }
 
     .consume-detail {
-        font-size: 0.9rem;
-        color: #6c757d;
+    font-size: 0.9rem;
+    color: #6c757d;
     }
     .low-quantity-warning {
     color: #ff9800;
@@ -236,233 +277,233 @@ else
     }
 
     .dose-combined-info {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     }
 
     .dose-time-info {
-        font-size: 0.9rem;
-        color: #6c757d;
+    font-size: 0.9rem;
+    color: #6c757d;
     }
 
     .upcoming-doses, .missed-doses {
-        margin-bottom: 2rem;
+    margin-bottom: 2rem;
     }
 
     .upcoming-doses-list, .missed-doses-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
     }
 
     .upcoming-dose-item, .missed-dose-item {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0.75rem;
-        background-color: #f8f9fa;
-        border-radius: 8px;
-        border-left: 4px solid #17a2b8;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #17a2b8;
     }
 
     .upcoming-dose-item {
-        border-left: 4px solid #17a2b8;
+    border-left: 4px solid #17a2b8;
     }
 
     .missed-dose-item {
-        border-left: 4px solid #dc3545;
-        background-color: #f8d7da;
+    border-left: 4px solid #dc3545;
+    background-color: #f8d7da;
     }
 
     .recent-due {
-        background-color: #fff3cd;
-        border-left: 4px solid #ffc107;
+    background-color: #fff3cd;
+    border-left: 4px solid #ffc107;
     }
 
     .dose-info {
-        display: flex;
-        flex-direction: column;
+    display: flex;
+    flex-direction: column;
     }
 
     .product-name {
-        font-weight: bold;
-        font-size: 1.1rem;
-        white-space: nowrap;
+    font-weight: bold;
+    font-size: 1.1rem;
+    white-space: nowrap;
     }
 
     .dose-detail {
-        font-size: 0.9rem;
-        color: #6c757d;
+    font-size: 0.9rem;
+    color: #6c757d;
     }
 
     .dose-time {
-        font-weight: 500;
+    font-weight: 500;
     }
 
     .due-text {
-        color: #dc3545;
-        font-weight: bold;
+    color: #dc3545;
+    font-weight: bold;
     }
 
     .missed-text {
-        color: #721c24;
-        font-weight: bold;
+    color: #721c24;
+    font-weight: bold;
     }
 
     .dose-actions {
-        display: flex;
-        gap: 0.5rem;
+    display: flex;
+    gap: 0.5rem;
     }
 
     .add-product-button {
-        padding: 0.75rem 1.5rem;
-        background-color: #28a745;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        margin-bottom: 1rem;
-        font-weight: 500;
+    padding: 0.75rem 1.5rem;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 1rem;
+    font-weight: 500;
     }
 
     .alert {
-        padding: 1rem;
-        margin-bottom: 1rem;
-        border-radius: 4px;
-        background-color: #fff3cd;
-        border: 1px solid #ffecb5;
-        color: #664d03;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+    background-color: #fff3cd;
+    border: 1px solid #ffecb5;
+    color: #664d03;
     }
 
     .permission-button {
-        padding: 0.5rem 1rem;
-        background-color: #0d6efd;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        margin-top: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: #0d6efd;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 0.5rem;
     }
 
     .take-product-button {
-        padding: 0.5rem 0.25rem;
-        background-color: #28a745;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-weight: 500;
-        margin-left: 0.5rem;
-        width: 90px;
+    padding: 0.5rem 0.25rem;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    margin-left: 0.5rem;
+    width: 90px;
     }
 
     .skip-product-button {
-        padding: 0.5rem 0.75rem;
-        background-color: #6c757d;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-weight: 500;
+    padding: 0.5rem 0.75rem;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
     }
 
     button:hover {
-        opacity: 0.9;
+    opacity: 0.9;
     }
 
     /* Popup overlay style */
     .popup-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: rgba(0, 0, 0, 0.5);
-        z-index: 999;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-        pointer-events: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
     }
 
     .overlay-visible {
-        opacity: 1;
-        pointer-events: auto;
+    opacity: 1;
+    pointer-events: auto;
     }
 
     /* In-page popup styles */
     .in-page-popup {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%) scale(0.9);
-        background-color: white;
-        border-radius: 8px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-        z-index: 1000;
-        width: 90%;
-        max-width: 400px;
-        opacity: 0;
-        transition: all 0.3s ease;
-        pointer-events: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    width: 90%;
+    max-width: 400px;
+    opacity: 0;
+    transition: all 0.3s ease;
+    pointer-events: none;
     }
 
     .popup-visible {
-        transform: translate(-50%, -50%) scale(1);
-        opacity: 1;
-        pointer-events: auto;
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+    pointer-events: auto;
     }
 
     .popup-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 16px;
-        border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid #eee;
     }
 
     .popup-title {
-        font-weight: 600;
-        font-size: 1.2rem;
+    font-weight: 600;
+    font-size: 1.2rem;
     }
 
     .popup-close {
-        background: none;
-        border: none;
-        font-size: 1.5rem;
-        cursor: pointer;
-        padding: 0;
-        color: #6c757d;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    color: #6c757d;
     }
 
     .popup-body {
-        padding: 16px;
+    padding: 16px;
     }
 
     .popup-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 12px;
-        margin-top: 16px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 16px;
     }
 
     .popup-button-yes,
     .popup-button-no {
-        padding: 8px 16px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-weight: 500;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
     }
 
     .popup-button-yes {
-        background-color: #dc3545;
-        color: white;
+    background-color: #dc3545;
+    color: white;
     }
 
     .popup-button-no {
-        background-color: #6c757d;
-        color: white;
+    background-color: #6c757d;
+    color: white;
     }
 </style>
 
@@ -472,6 +513,8 @@ else
     private List<UpcomingDose> upcomingDoses = new();
     private List<MissedDosage> missedDosages = new();
     private List<MissedDose> missedDoses = new(); // Keep this for backward compatibility
+    private List<UsageHistory> takenDoses = new();
+    private bool ShowTodayTaken = false;
 
     // In-page popup confirmation fields
     private bool showConfirmationPopup = false;
@@ -481,7 +524,7 @@ else
     // Version check fields
     private bool showVersionPopup = false;
     private bool isVersionPopupVisible = false;
-    private const int EXPECTED_VERSION = 3; // The expected version number
+    private const string EXPECTED_VERSION = "4"; // The expected version number
     private string versionFilePath = string.Empty;
 
     // Class to store information about upcoming doses
@@ -521,9 +564,16 @@ else
         // Check version file first
         await CheckVersionFile();
 
+        var settingsService = MauiProgram.Services.GetService<ISettingsService>();
+        ShowTodayTaken = settingsService?.ShowTodayTaken ?? false;
+
         await CheckNotificationPermission();
         await LoadProducts();
         await LoadMissedDosages();
+        if (ShowTodayTaken)
+        {
+            await LoadTakenDoses();
+        }
         await OrganizeUpcomingDoses();
 
         await base.OnInitializedAsync();
@@ -563,6 +613,21 @@ else
         await LoadProducts();
     }
 
+    private async Task LoadTakenDoses()
+    {
+        try
+        {
+            var allHistory = await ProductService.GetAllProductHistoryAsync();
+            var now = DateTime.Now;
+            takenDoses = allHistory
+                .Where(h => h.Timestamp >= now.AddHours(-24) && h.Event == EventType.Taken)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+        }
+    }
+
 private void CheckForPendingReminderConfig()
 {
 #if ANDROID
@@ -598,10 +663,7 @@ private void CheckForPendingReminderConfig()
             {
                 // Read the version number from file
                 string versionText = await File.ReadAllTextAsync(versionFilePath);
-                if (int.TryParse(versionText.Trim(), out int currentVersion))
-                {
-                    versionMatches = (currentVersion == EXPECTED_VERSION);
-                }
+                versionMatches = (versionText == EXPECTED_VERSION);
             }
             
             if (!fileExists || !versionMatches)
@@ -632,7 +694,7 @@ private void CheckForPendingReminderConfig()
             }
             
             // Write the expected version to file
-            await File.WriteAllTextAsync(versionFilePath, EXPECTED_VERSION.ToString());
+            await File.WriteAllTextAsync(versionFilePath, EXPECTED_VERSION);
         }
         catch (Exception ex)
         {

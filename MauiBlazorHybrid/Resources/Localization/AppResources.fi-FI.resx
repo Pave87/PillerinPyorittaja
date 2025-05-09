@@ -400,7 +400,16 @@
 	<data name="Amount_Consumed_By_Need" xml:space="preserve">
 		<value>Tarvittaesssa otettu annos</value>
 	</data>
-	<data name="remind_15_action" xml:space="preserve">
+	<data name="Remind_15_Minutes" xml:space="preserve">
 		<value>Muistuta 15 minuutin päästä</value>
+	</data>
+	<data name="Taken_Past_24H" xml:space="preserve">
+		<value>Otettu viimeisen vuorokauden aikana</value>
+	</data>
+	<data name="Show_Today_Taken" xml:space="preserve">
+		<value>Näytä viimeisen vuorokauden otetut annokset</value>
+	</data>
+	<data name="Show_Today_Taken_Description" xml:space="preserve">
+		<value>Näytä otetut</value>
 	</data>
 </root>

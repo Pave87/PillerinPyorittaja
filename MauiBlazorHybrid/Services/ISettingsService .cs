@@ -6,6 +6,7 @@ namespace MauiBlazorHybrid.Services
     public interface ISettingsService
     {
         bool IsDebugEnabled { get; set; }
+        bool ShowTodayTaken { get; set; }
         event EventHandler SettingsChanged;
     }
 
@@ -22,6 +23,13 @@ namespace MauiBlazorHybrid.Services
                 Preferences.Default.Set(DEBUG_KEY, value);
                 SettingsChanged?.Invoke(this, EventArgs.Empty);
             }
+        }
+
+        private const string ShowTodayTakenKey = "ShowTodayTaken";
+        public bool ShowTodayTaken
+        {
+            get => Preferences.Get(ShowTodayTakenKey, false); // Default to false
+            set => Preferences.Set(ShowTodayTakenKey, value);
         }
     }
 }
