@@ -18,19 +18,10 @@ namespace MauiBlazorHybrid
 
         private readonly ILoggerService _loggerService = new LoggerService();
 
-        private readonly IProductService _productService;
-
         public MainActivity()
         {
             // Initialize default services or leave empty
         }
-
-        public MainActivity(IProductService productService)
-        {
-            _loggerService.Log("Initializing MainActivity ProductService...");
-            _productService = productService;
-        }
-
 
         protected override void OnCreate(Bundle savedInstanceState)
         {
@@ -48,7 +39,7 @@ namespace MauiBlazorHybrid
             ProcessIntent(intent);
         }
 
-        private void ProcessIntent(Android.Content.Intent intent) // Ensure the correct namespace is used
+        private void ProcessIntent(Android.Content.Intent intent)
         {
             _loggerService.Log("MainActivity: ProcessIntent called");
             if (intent != null && intent.HasExtra("action"))
@@ -77,16 +68,62 @@ namespace MauiBlazorHybrid
                 {
                     int productId = intent.GetIntExtra("productId", 0);
                     int dosageId = intent.GetIntExtra("dosageId", 0);
-                    int amount = intent.GetIntExtra("amount", 0);
+                    double amount = intent.GetDoubleExtra("amount", 0);
 
                     var productService = MauiApplication.Current.Services.GetService<IProductService>();
-                    var products = productService?.GetProductsAsync();
-
-                    var success = productService.TakeProductDoseAsync(productId, amount, dosageId);
-                    _loggerService.Log($"MainActivity: Processed intent with productId={productId}, dosageId={dosageId}, amount={amount}, success={success}");
-
+                    if (productService != null)
+                    {
+                        Task.Run(async () =>
+                        {
+                            bool success = await productService.TakeProductDoseAsync(productId, amount, dosageId);
+                            _loggerService.Log($"MainActivity: Processed take_now_action with productId={productId}, dosageId={dosageId}, amount={amount}, success={success}");
+                        });
+                    }
                 }
+                else if (action == "remind_15_action")
+                {
+                    int productId = intent.GetIntExtra("productId", 0);
+                    int dosageId = intent.GetIntExtra("dosageId", 0);
 
+                    var productService = MauiApplication.Current.Services.GetService<IProductService>();
+                    var notificationService = MauiApplication.Current.Services.GetService<INotificationService>();
+
+                    if (productService != null && notificationService != null)
+                    {
+                        Task.Run(async () =>
+                        {
+                            try
+                            {
+                                // Retrieve the product and dosage
+                                var product = await productService.GetProductAsync(productId);
+                                if (product != null)
+                                {
+                                    var dosage = product.Dosages.FirstOrDefault(d => d.Id == dosageId);
+                                    if (dosage != null)
+                                    {
+                                        // Schedule a new notification 15 minutes from now
+                                        DateTime remindTime = DateTime.Now.AddMinutes(15);
+                                        var notificationId = productId * 1000 + dosageId * 10 + 2;
+                                        await notificationService.ScheduleNotificationAsync(product, dosage, remindTime, notificationId);
+                                        _loggerService.Log($"MainActivity: Scheduled remind_15_action for productId={productId}, dosageId={dosageId} at {remindTime}");
+                                    }
+                                    else
+                                    {
+                                        _loggerService.Log($"MainActivity: Dosage with ID {dosageId} not found for productId={productId}");
+                                    }
+                                }
+                                else
+                                {
+                                    _loggerService.Log($"MainActivity: Product with ID {productId} not found");
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _loggerService.Log($"MainActivity: Error processing remind_15_action: {ex.Message}");
+                            }
+                        });
+                    }
+                }
             }
         }
 

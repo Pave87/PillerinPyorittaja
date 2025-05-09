@@ -400,4 +400,7 @@
 	<data name="Amount_Consumed_By_Need" xml:space="preserve">
 		<value>Tarvittaesssa otettu annos</value>
 	</data>
+	<data name="remind_15_action" xml:space="preserve">
+		<value>Muistuta 15 minuutin päästä</value>
+	</data>
 </root>

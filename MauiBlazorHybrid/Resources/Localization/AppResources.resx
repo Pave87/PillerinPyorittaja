@@ -400,4 +400,7 @@
 	<data name="Amount_Consumed_By_Need" xml:space="preserve">
 		<value>Amount taken when needed</value>
 	</data>
+	<data name="remind_15_action" xml:space="preserve">
+		<value>Remind in 15 minutes</value>
+	</data>
 </root>

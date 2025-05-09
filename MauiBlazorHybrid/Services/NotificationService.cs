@@ -32,6 +32,7 @@ namespace MauiBlazorHybrid.Services
 
         // Action identifiers for notification buttons
         private const string ACTION_TAKE_NOW = "take_now_action";
+        private const string ACTION_REMIND_15 = "remind_15_action"; // New action identifier
 
         private readonly ILoggerService _loggerService = new LoggerService();
 
@@ -121,8 +122,8 @@ namespace MauiBlazorHybrid.Services
                 permissionGranted = false;
             }
 #else
-            // Default for other platforms
-            permissionGranted = true;
+                // Default for other platforms
+                permissionGranted = true;
 #endif
 
             return permissionGranted;
@@ -145,10 +146,10 @@ namespace MauiBlazorHybrid.Services
 
             // Show a confirmation toast with localized text using named parameters
             var reminderParams = new Dictionary<string, object>
-            {
-                { "productName", product.Name },
-                { "scheduledTime", nextDoseTime.ToString("g") }
-            };
+                {
+                    { "productName", product.Name },
+                    { "scheduledTime", nextDoseTime.ToString("g") }
+                };
             var toast = Toast.Make(LF("Reminder_Scheduled_For", reminderParams), ToastDuration.Short);
             await toast.Show();
             _loggerService.Log($"Notification scheduled for {product.Id} at {nextDoseTime}");
@@ -315,24 +316,24 @@ namespace MauiBlazorHybrid.Services
                 _loggerService.Log($"Scheduling notification for product {product.Id} at {scheduleTime}");
                 await _semaphore.WaitAsync();
 
-                if(notificationId == null)
+                if (notificationId == null)
                 {
                     notificationId = GenerateNotificationId(product.Id, dosage.Id);
                 }
 
                 // Create localized notification message using LF with named parameters
                 var titleParams = new Dictionary<string, object>
-                {
-                    { "productName", product.Name }
-                };
+                    {
+                        { "productName", product.Name }
+                    };
                 string title = LF("Time_To_Take", titleParams);
 
                 var messageParams = new Dictionary<string, object>
-                {
-                    { "amount", dosage.AmountTaken.ToString() },
-                    { "unit", product.Unit },
-                    { "productName", product.Name }
-                };
+                    {
+                        { "amount", dosage.AmountTaken.ToString() },
+                        { "unit", product.Unit },
+                        { "productName", product.Name }
+                    };
                 string message = LF("Take_Amount_Of", messageParams);
 
 #if ANDROID
@@ -376,6 +377,7 @@ namespace MauiBlazorHybrid.Services
 
                 // Add localized button text
                 intent.PutExtra("takeNowText", L("Take_Now"));
+                intent.PutExtra("remind15Text", L("Remind_15_Minutes")); // New button text
                 intent.PutExtra("amount", (double)dosage.AmountTaken);
 
                 // Create unique pending intent
@@ -658,6 +660,23 @@ namespace MauiBlazorHybrid.Services
                     flags);
 
                 notificationBuilder.AddAction(Android.Resource.Drawable.IcDialogInfo, takeNowText, takeNowPendingIntent);
+
+                // Add Remind 15 Minutes action button
+                string remind15Text = intent.GetStringExtra("remind15Text") ?? "Remind in 15 Min";
+                var remind15Intent = new Intent(context, typeof(NotificationActionReceiver));
+                remind15Intent.SetAction("remind_15_action");
+                remind15Intent.PutExtra("notificationId", notificationId);
+                remind15Intent.PutExtra("productId", productId);
+                remind15Intent.PutExtra("dosageId", dosageId);
+
+                var remind15PendingIntent = PendingIntent.GetBroadcast(
+                    context,
+                    notificationId * 10 + 2, // Unique request code
+                    remind15Intent,
+                    flags);
+
+                notificationBuilder.AddAction(Android.Resource.Drawable.IcDialogInfo, remind15Text, remind15PendingIntent);
+
                 // Show the notification
                 var notificationManagerCompat = NotificationManagerCompat.From(context);
 
@@ -723,7 +742,7 @@ namespace MauiBlazorHybrid.Services
 
     // Add broadcast receiver for notification actions
     [BroadcastReceiver(Enabled = true, Exported = true)]
-    [IntentFilter(new[] { "take_now_action" })]
+    [IntentFilter(new[] { "take_now_action", "remind_15_action" })] // Added remind_15_action
     public class NotificationActionReceiver : BroadcastReceiver
     {
         private readonly ILoggerService _loggerService = new LoggerService();
@@ -783,6 +802,43 @@ namespace MauiBlazorHybrid.Services
                         _loggerService.Log("Failed to get ProductService instance for TakeNow action");
                     }
                 }
+                else if (action == "remind_15_action")
+                {
+                    _loggerService.Log($"Remind 15 Minutes action triggered for notification ID: {notificationId}");
+
+                    // Schedule a new notification 15 minutes from now
+                    Task.Run(async () =>
+                    {
+                        try
+                        {
+                            var notificationService = GetNotificationService(context);
+                            if (notificationService != null)
+                            {
+                                DateTime remindTime = DateTime.Now.AddMinutes(15);
+
+                                // Get the product and dosage details
+                                var productService = GetProductService(context);
+                                if (productService != null)
+                                {
+                                    var product = await productService.GetProductAsync(productId);
+                                    if (product != null)
+                                    {
+                                        var dosage = product.Dosages.FirstOrDefault(d => d.Id == dosageId);
+                                        if (dosage != null)
+                                        {
+                                            await notificationService.ScheduleNotificationAsync(product, dosage, remindTime, notificationId);
+                                            _loggerService.Log($"Scheduled reminder in 15 minutes for product ID: {productId}, dosage ID: {dosageId}");
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        catch (System.Exception ex)
+                        {
+                            _loggerService.Log($"Error scheduling reminder in 15 minutes: {ex.Message}");
+                        }
+                    });
+                }
             }
             catch (System.Exception ex)
             {
@@ -815,6 +871,35 @@ namespace MauiBlazorHybrid.Services
             catch (System.Exception ex)
             {
                 _loggerService.Log($"Error getting ProductService: {ex.Message}");
+                return null;
+            }
+        }
+
+        private INotificationService GetNotificationService(Context context)
+        {
+            try
+            {
+                // Access the MauiApp to get the registered services
+                var application = Microsoft.Maui.MauiApplication.Current;
+
+                if (application != null)
+                {
+                    // Get the service provider
+                    var services = application.Services;
+
+                    if (services != null)
+                    {
+                        // Get the INotificationService instance
+                        var notificationService = services.GetService(typeof(INotificationService)) as INotificationService;
+                        return notificationService;
+                    }
+                }
+
+                return null;
+            }
+            catch (System.Exception ex)
+            {
+                _loggerService.Log($"Error getting NotificationService: {ex.Message}");
                 return null;
             }
         }
