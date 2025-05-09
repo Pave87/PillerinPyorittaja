@@ -7,6 +7,7 @@ namespace MauiBlazorHybrid
 {
     public static class MauiProgram
     {
+        public static IServiceProvider Services { get; private set; }
         public static MauiApp CreateMauiApp()
         {
             var builder = MauiApp.CreateBuilder();
@@ -34,6 +35,7 @@ namespace MauiBlazorHybrid
             //builder.Services.AddSingleton<IAdService, AdService>(); Add support temporarily disabled
 
             var app = builder.Build();
+            Services = app.Services;
 
             // Resolve ILoggerService and log the message
             var loggerService = app.Services.GetService<ILoggerService>();
