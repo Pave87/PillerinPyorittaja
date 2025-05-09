@@ -12,6 +12,7 @@ namespace MauiBlazorHybrid.Services
         Task<bool> RequestPermissionAsync();
         Task ScheduleNotificationAsync(Product pill, DosageSchedule dosage);
         Task ScheduleNotificationAsync(Product pill, DosageSchedule dosage, DateTime nextDoseTime);
+        Task ScheduleNotificationAsync(Product pill, DosageSchedule dosage, DateTime nextDoseTime, int notificationId);
         Task CancelNotificationsAsync(int pillId);
     }
 }

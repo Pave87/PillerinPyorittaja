@@ -32,14 +32,15 @@ namespace MauiBlazorHybrid.Services
 
         // Action identifiers for notification buttons
         private const string ACTION_TAKE_NOW = "take_now_action";
-        private const string ACTION_REMIND_LATER = "remind_later_action";
 
         private readonly ILoggerService _loggerService = new LoggerService();
 
         public NotificationService(ILocalizationService localizationService)
         {
+            _loggerService.Log("Initializing NotificationService...");
             _localizationService = localizationService;
             _initialized = true;
+            _loggerService.Log("NotificationService initialized.");
         }
 
         // Helper method to get localized text
@@ -51,6 +52,7 @@ namespace MauiBlazorHybrid.Services
             {
                 Task.Delay(100);
                 retryCount++;
+                _loggerService.Log($"Waiting for NotificationService to initialize... Attempt {retryCount}");
             }
             return _localizationService.GetString(key);
         }
@@ -64,6 +66,7 @@ namespace MauiBlazorHybrid.Services
             {
                 Task.Delay(100);
                 retryCount++;
+                _loggerService.Log($"Waiting for NotificationService to initialize... Attempt {retryCount}");
             }
             return _localizationService.Format(key, parameters);
         }
@@ -71,7 +74,7 @@ namespace MauiBlazorHybrid.Services
         public async Task<bool> RequestPermissionAsync()
         {
             bool permissionGranted = false;
-
+            _loggerService.Log("Requesting notification permissions...");
 #if ANDROID
             try
             {
@@ -91,6 +94,7 @@ namespace MauiBlazorHybrid.Services
                 // If permission granted, also set up the alarm permissions
                 if (permissionGranted)
                 {
+                    _loggerService.Log("Notification permission granted.");
                     // For Android 12+ we need to ask for SCHEDULE_EXACT_ALARM permission
                     if (OperatingSystem.IsAndroidVersionAtLeast(31))
                     {
@@ -113,7 +117,7 @@ namespace MauiBlazorHybrid.Services
             }
             catch (System.Exception ex)
             {
-                Console.WriteLine($"Error requesting permissions: {ex.Message}");
+                _loggerService.Log($"Error requesting permissions: {ex.Message}");
                 permissionGranted = false;
             }
 #else
@@ -126,6 +130,7 @@ namespace MauiBlazorHybrid.Services
 
         public async Task ScheduleNotificationAsync(Product product, DosageSchedule dosage)
         {
+            _loggerService.Log($"Scheduling notification for product {product.Id} with dosage ID {dosage.Id}");
             // Find the most recent history entry for this dosage
             var lastTaken = product.History
                 ?.Where(h => h.DosageId == dosage.Id)
@@ -136,7 +141,7 @@ namespace MauiBlazorHybrid.Services
             DateTime nextDoseTime = CalculateNextDoseTime(dosage, lastTaken?.Timestamp);
 
             // Schedule notification for the next dose
-            await ScheduleNotification(product, dosage, nextDoseTime);
+            await ScheduleNotification(product, dosage, nextDoseTime, null);
 
             // Show a confirmation toast with localized text using named parameters
             var reminderParams = new Dictionary<string, object>
@@ -146,12 +151,19 @@ namespace MauiBlazorHybrid.Services
             };
             var toast = Toast.Make(LF("Reminder_Scheduled_For", reminderParams), ToastDuration.Short);
             await toast.Show();
+            _loggerService.Log($"Notification scheduled for {product.Id} at {nextDoseTime}");
         }
 
         public async Task ScheduleNotificationAsync(Product product, DosageSchedule dosage, DateTime nextDoseTime)
         {
-            if(nextDoseTime> DateTime.Now)
-                await ScheduleNotification(product, dosage, nextDoseTime);
+            if (nextDoseTime > DateTime.Now)
+                await ScheduleNotification(product, dosage, nextDoseTime, null);
+        }
+
+        public async Task ScheduleNotificationAsync(Product product, DosageSchedule dosage, DateTime nextDoseTime, int notificationId)
+        {
+            if (nextDoseTime > DateTime.Now)
+                await ScheduleNotification(product, dosage, nextDoseTime, notificationId);
         }
 
         private DateTime CalculateNextDoseTime(DosageSchedule dosage, DateTime? lastTakenTime)
@@ -296,13 +308,17 @@ namespace MauiBlazorHybrid.Services
             return startDate.AddDays(daysToAdd);
         }
 
-        private async Task ScheduleNotification(Product product, DosageSchedule dosage, DateTime scheduleTime)
+        private async Task ScheduleNotification(Product product, DosageSchedule dosage, DateTime scheduleTime, int? notificationId)
         {
             try
             {
+                _loggerService.Log($"Scheduling notification for product {product.Id} at {scheduleTime}");
                 await _semaphore.WaitAsync();
 
-                var notificationId = GenerateNotificationId(product.Id, dosage.Id);
+                if(notificationId == null)
+                {
+                    notificationId = GenerateNotificationId(product.Id, dosage.Id);
+                }
 
                 // Create localized notification message using LF with named parameters
                 var titleParams = new Dictionary<string, object>
@@ -321,13 +337,14 @@ namespace MauiBlazorHybrid.Services
 
 #if ANDROID
                 // Schedule system alarm for reliable background notifications
-                ScheduleAndroidAlarm(product, dosage, scheduleTime, notificationId, title, message);
+                ScheduleAndroidAlarm(product, dosage, scheduleTime, notificationId ?? 0, title, message);
 #endif
             }
             finally
             {
                 _semaphore.Release();
             }
+            _loggerService.Log($"Notification scheduled for product {product.Id} at {scheduleTime}");
         }
 
 #if ANDROID
@@ -335,6 +352,7 @@ namespace MauiBlazorHybrid.Services
         {
             try
             {
+                _loggerService.Log($"Scheduling Android alarm for product {product.Id} at {scheduleTime}");
                 var context = Android.App.Application.Context;
 
                 // Cancel any existing alarms for this notification
@@ -358,7 +376,6 @@ namespace MauiBlazorHybrid.Services
 
                 // Add localized button text
                 intent.PutExtra("takeNowText", L("Take_Now"));
-                intent.PutExtra("remindLaterText", L("Remind_Later"));
                 intent.PutExtra("amount", (double)dosage.AmountTaken);
 
                 // Create unique pending intent
@@ -398,12 +415,12 @@ namespace MauiBlazorHybrid.Services
                         alarmManager.SetExact(AlarmType.RtcWakeup, triggerAtMillis, pendingIntent);
                     }
 
-                    Console.WriteLine($"Scheduled Android alarm for {product.Name} at {scheduleTime}");
+                    _loggerService.Log($"Scheduled Android alarm for {product.Name} at {scheduleTime}");
                 }
             }
             catch (System.Exception ex)
             {
-                Console.WriteLine($"Error scheduling Android alarm: {ex.Message}");
+                _loggerService.Log($"Error scheduling Android alarm: {ex.Message}");
             }
         }
 
@@ -435,7 +452,7 @@ namespace MauiBlazorHybrid.Services
             }
             catch (System.Exception ex)
             {
-                Console.WriteLine($"Error canceling alarm: {ex.Message}");
+                _loggerService.Log($"Error canceling alarm: {ex.Message}");
             }
         }
 #endif
@@ -475,7 +492,7 @@ namespace MauiBlazorHybrid.Services
                 }
                 catch (System.Exception ex)
                 {
-                    Console.WriteLine($"Error canceling notifications for product {productId}: {ex.Message}");
+                    _loggerService.Log($"Error canceling notifications for product {productId}: {ex.Message}");
                 }
 #endif
             }
@@ -487,7 +504,7 @@ namespace MauiBlazorHybrid.Services
 
         private int GenerateNotificationId(int productId, int dosageId)
         {
-            return productId * 1000 + dosageId;
+            return productId * 1000 + dosageId * 10;
         }
 
         private DayOfWeek ParseWeekDay(string day) => day switch
@@ -517,8 +534,8 @@ namespace MauiBlazorHybrid.Services
     [IntentFilter(new[] { "android.intent.action.BOOT_COMPLETED" })]
     public class NotificationAlarmReceiver : BroadcastReceiver
     {
-        // We can't inject services in broadcast receivers, so we'll need to use the strings as is
-        // from the intent extras
+        private readonly ILoggerService _loggerService = new LoggerService();
+
         public override void OnReceive(Context context, Intent intent)
         {
             try
@@ -526,16 +543,15 @@ namespace MauiBlazorHybrid.Services
                 // Skip showing notifications for boot completed events
                 if (intent.Action == Intent.ActionBootCompleted)
                 {
-                    Console.WriteLine("Device reboot detected. Not showing notifications immediately.");
-                    // Here you could add code to reschedule future notifications if needed
+                    _loggerService.Log("Device reboot detected. Not showing notifications immediately.");
                     return;
                 }
+
                 // Get notification details from intent
                 int notificationId = intent.GetIntExtra("notificationId", 0);
                 int productId = intent.GetIntExtra("productId", 0);
                 int dosageId = intent.GetIntExtra("dosageId", 0);
                 double amount = intent.GetDoubleExtra("amount", 0);
-
 
                 // Get pre-localized strings from intent extras (already localized by NotificationService)
                 string title = intent.GetStringExtra("title");
@@ -584,13 +600,21 @@ namespace MauiBlazorHybrid.Services
                 }
                 resultIntent.SetFlags(ActivityFlags.NewTask | ActivityFlags.ClearTask);
 
+                // Add action, product ID, and dosage ID to the intent
+                resultIntent.PutExtra("action", "edit_reminder");
+                resultIntent.PutExtra("productId", productId);
+                resultIntent.PutExtra("dosageId", dosageId);
+                resultIntent.PutExtra("remind_later", false);
+
+                _loggerService.Log($"Setting notification intent with action=edit_reminder, productId={productId}, dosageId={dosageId}");
+
                 // Create pending intent
                 PendingIntentFlags flags = PendingIntentFlags.UpdateCurrent;
                 if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.S)
                 {
                     flags |= PendingIntentFlags.Immutable;
                 }
-                var pendingIntent = PendingIntent.GetActivity(context, notificationId, resultIntent, flags);
+                var pendingIntent = PendingIntent.GetActivity(context, notificationId * 10, resultIntent, flags);
 
                 // Try to find the app icon
                 int iconResource;
@@ -617,6 +641,7 @@ namespace MauiBlazorHybrid.Services
                     .SetDefaults((int)NotificationDefaults.Sound | (int)NotificationDefaults.Vibrate)
                     .SetPriority(NotificationCompat.PriorityHigh);
 
+
                 // Add Take Now action button
                 string takeNowText = intent.GetStringExtra("takeNowText") ?? "Take Now";
                 var takeNowIntent = new Intent(context, typeof(NotificationActionReceiver));
@@ -633,23 +658,6 @@ namespace MauiBlazorHybrid.Services
                     flags);
 
                 notificationBuilder.AddAction(Android.Resource.Drawable.IcDialogInfo, takeNowText, takeNowPendingIntent);
-
-                // Add Remind Later action button
-                string remindLaterText = intent.GetStringExtra("remindLaterText") ?? "Remind Later";
-                var remindLaterIntent = new Intent(context, typeof(NotificationActionReceiver));
-                remindLaterIntent.SetAction("remind_later_action");
-                remindLaterIntent.PutExtra("notificationId", notificationId);
-                remindLaterIntent.PutExtra("productId", productId);
-                remindLaterIntent.PutExtra("dosageId", dosageId);
-
-                var remindLaterPendingIntent = PendingIntent.GetBroadcast(
-                    context,
-                    notificationId * 10 + 2, // Unique request code
-                    remindLaterIntent,
-                    flags);
-
-                notificationBuilder.AddAction(Android.Resource.Drawable.IcMenuRotate, remindLaterText, remindLaterPendingIntent);
-
                 // Show the notification
                 var notificationManagerCompat = NotificationManagerCompat.From(context);
 
@@ -674,7 +682,7 @@ namespace MauiBlazorHybrid.Services
                     catch (System.Exception ex)
                     {
                         canShowNotification = false;
-                        Console.WriteLine($"Error checking notification permission: {ex.Message}");
+                        _loggerService.Log($"Error checking notification permission: {ex.Message}");
                     }
                 }
 
@@ -701,23 +709,25 @@ namespace MauiBlazorHybrid.Services
                     }
                     catch (System.Exception ex)
                     {
-                        Console.WriteLine($"Error vibrating device: {ex.Message}");
+                        _loggerService.Log($"Error vibrating device: {ex.Message}");
                         // Ignore vibration errors
                     }
                 }
             }
             catch (System.Exception ex)
             {
-                Console.WriteLine($"Error in NotificationAlarmReceiver: {ex.Message}");
+                _loggerService.Log($"Error in NotificationAlarmReceiver: {ex.Message}");
             }
         }
     }
 
     // Add broadcast receiver for notification actions
     [BroadcastReceiver(Enabled = true, Exported = true)]
-    [IntentFilter(new[] { "take_now_action", "remind_later_action" })]
+    [IntentFilter(new[] { "take_now_action" })]
     public class NotificationActionReceiver : BroadcastReceiver
     {
+        private readonly ILoggerService _loggerService = new LoggerService();
+
         public override void OnReceive(Context context, Intent intent)
         {
             try
@@ -728,7 +738,7 @@ namespace MauiBlazorHybrid.Services
                 int dosageId = intent.GetIntExtra("dosageId", 0);
                 double amount = intent.GetDoubleExtra("amount", 0);
 
-                Console.WriteLine($"Action received: {action} for notification ID: {notificationId}");
+                _loggerService.Log($"Action received: {action} for notification ID: {notificationId}");
 
                 // Always cancel the notification when an action is taken
                 var notificationManager = NotificationManagerCompat.From(context);
@@ -736,7 +746,7 @@ namespace MauiBlazorHybrid.Services
 
                 if (action == "take_now_action")
                 {
-                    Console.WriteLine($"Take Now action triggered for notification ID: {notificationId}");
+                    _loggerService.Log($"Take Now action triggered for notification ID: {notificationId}");
 
                     // Get the IProductService instance from the application context
                     var productService = GetProductService(context);
@@ -760,30 +770,23 @@ namespace MauiBlazorHybrid.Services
                                 toastIntent.PutExtra("message", toastMessage);
                                 context.SendBroadcast(toastIntent);
 
-                                Console.WriteLine($"TakeProductDoseAsync completed with result: {result}");
+                                _loggerService.Log($"TakeProductDoseAsync completed with result: {result}");
                             }
                             catch (System.Exception ex)
                             {
-                                Console.WriteLine($"Error taking dose: {ex.Message}");
+                                _loggerService.Log($"Error taking dose: {ex.Message}");
                             }
                         });
                     }
                     else
                     {
-                        Console.WriteLine("Failed to get ProductService instance for TakeNow action");
+                        _loggerService.Log("Failed to get ProductService instance for TakeNow action");
                     }
-                }
-                else if (action == "remind_later_action")
-                {
-                    Console.WriteLine($"Remind Later action triggered for notification ID: {notificationId}");
-
-                    // Launch the app to configure the reminder for this specific product
-                    LaunchAppToConfigureReminder(context, productId, dosageId);
                 }
             }
             catch (System.Exception ex)
             {
-                Console.WriteLine($"Error in NotificationActionReceiver: {ex.Message}");
+                _loggerService.Log($"Error in NotificationActionReceiver: {ex.Message}");
             }
         }
 
@@ -811,40 +814,8 @@ namespace MauiBlazorHybrid.Services
             }
             catch (System.Exception ex)
             {
-                Console.WriteLine($"Error getting ProductService: {ex.Message}");
+                _loggerService.Log($"Error getting ProductService: {ex.Message}");
                 return null;
-            }
-        }
-
-        private void LaunchAppToConfigureReminder(Context context, int productId, int dosageId)
-        {
-            try
-            {
-                // Get the main activity launch intent
-                var launchIntent = context.PackageManager.GetLaunchIntentForPackage(context.PackageName);
-                if (launchIntent == null)
-                {
-                    // Fallback if launch intent is not found
-                    launchIntent = new Intent(context, typeof(MainActivity));
-                }
-
-                // Set flags for launching activity
-                launchIntent.SetFlags(ActivityFlags.NewTask | ActivityFlags.ClearTask);
-
-                // Use the exact parameters that ProcessIntent is expecting
-                // Since ProcessIntent is already implemented, we need to match its expected format
-                launchIntent.PutExtra("action", "edit_reminder");  // This should match what ProcessIntent expects
-                launchIntent.PutExtra("productId", productId);
-                launchIntent.PutExtra("dosageId", dosageId);
-
-                // Launch the activity
-                context.StartActivity(launchIntent);
-
-                Console.WriteLine($"Launching app to configure reminder for product ID {productId}, dosage ID {dosageId}");
-            }
-            catch (System.Exception ex)
-            {
-                Console.WriteLine($"Error launching app from notification: {ex.Message}");
             }
         }
     }

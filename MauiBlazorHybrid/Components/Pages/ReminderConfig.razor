@@ -30,9 +30,9 @@
             <div class="form-group">
                 <label>@L("Time"):</label>
                 <input type="time"
-                       @bind="selectedTime"
-                       @bind:event="oninput"
-                       class="form-control" />
+                @bind="selectedTime"
+                @bind:event="oninput"
+                class="form-control" />
             </div>
         </div>
     </div>
@@ -55,98 +55,99 @@
 
 <style>
     .reminder-config-container {
-        padding: 1rem;
-        max-width: 500px;
-        margin: 0 auto;
+    padding: 1rem;
+    max-width: 500px;
+    margin: 0 auto;
     }
 
     .product-info {
-        margin-bottom: 1.5rem;
-        padding: 1rem;
-        background-color: #f8f9fa;
-        border-radius: 8px;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-radius: 8px;
     }
 
     .time-picker-section {
-        margin-bottom: 2rem;
+    margin-bottom: 2rem;
     }
 
     .time-picker-container {
-        margin-top: 1rem;
+    margin-top: 1rem;
     }
 
     .form-group {
-        margin-bottom: 1rem;
+    margin-bottom: 1rem;
     }
 
     label {
-        display: block;
-        font-weight: bold;
-        margin-bottom: 0.5rem;
+    display: block;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
     }
 
     .form-control {
-        width: 100%;
-        padding: 0.5rem;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 1.5rem;
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1.5rem;
     }
 
     .date-info {
-        text-align: center;
-        margin-top: 1.5rem;
-        font-weight: bold;
+    text-align: center;
+    margin-top: 1.5rem;
+    font-weight: bold;
     }
 
     .quick-options {
-        margin-bottom: 2rem;
+    margin-bottom: 2rem;
     }
 
     .quick-buttons {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        justify-content: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
     }
 
     .quick-button {
-        background-color: #6c757d;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        padding: 0.5rem 1rem;
-        font-size: 0.9rem;
-        cursor: pointer;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    cursor: pointer;
     }
 
     .action-buttons {
-        display: flex;
-        justify-content: space-between;
-        gap: 1rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
     }
 
     .btn-schedule, .btn-cancel {
-        padding: 0.75rem 1.5rem;
-        border: none;
-        border-radius: 4px;
-        font-weight: 500;
-        cursor: pointer;
-        flex: 1;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    flex: 1;
     }
 
     .btn-schedule {
-        background-color: #28a745;
-        color: white;
+    background-color: #28a745;
+    color: white;
     }
 
     .btn-cancel {
-        background-color: #dc3545;
-        color: white;
+    background-color: #dc3545;
+    color: white;
     }
 </style>
 
 @code {
+
     [Parameter]
     public int ProductId { get; set; }
 
@@ -203,6 +204,7 @@
     private void SetTimeFromNow(int minutes)
     {
         DateTime targetTime = DateTime.Now.AddMinutes(minutes);
+
         selectedTime = TimeOnly.FromDateTime(targetTime);
         StateHasChanged();
     }
@@ -213,8 +215,11 @@
         {
             try
             {
+                int notificationId = product.Id * 1000 + dosage.Id * 10 + 1;
+
+                GetFormattedDateTime();
                 // Schedule notification for the selected time
-                await NotificationService.ScheduleNotificationAsync(product, dosage, selectedDateTime);
+                await NotificationService.ScheduleNotificationAsync(product, dosage, selectedDateTime, notificationId);
 
                 // Navigate back to the home page (or another appropriate page)
                 NavigationManager.NavigateTo("/");
