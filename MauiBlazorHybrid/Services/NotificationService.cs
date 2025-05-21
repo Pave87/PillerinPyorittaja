@@ -790,6 +790,33 @@ namespace MauiBlazorHybrid.Services
                                 context.SendBroadcast(toastIntent);
 
                                 _loggerService.Log($"TakeProductDoseAsync completed with result: {result}");
+
+                                                     // After taking dose, schedule notifications
+                                if (result)
+                                {
+                                    // Get the product to schedule notifications
+                                    var product = await productService.GetProductAsync(productId);
+                                    if (product != null)
+                                    {
+                                        // Get notification service to reschedule notifications
+                                        var notificationService = GetNotificationService(context);
+                                        if (notificationService != null)
+                                        {
+                                            // Cancel existing notifications for this product
+                                            await notificationService.CancelNotificationsAsync(productId);
+                                    
+                                            // Schedule notifications for all dosages
+                                            foreach (var dosage in product.Dosages)
+                                            {
+                                                if (dosage.NextDose.HasValue)
+                                                {
+                                                    await notificationService.ScheduleNotificationAsync(product, dosage, dosage.NextDose.Value);
+                                                    _loggerService.Log($"Rescheduled notification for product {productId}, dosage {dosage.Id} at {dosage.NextDose.Value}");
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                             catch (System.Exception ex)
                             {
