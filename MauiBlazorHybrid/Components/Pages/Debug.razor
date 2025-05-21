@@ -1,6 +1,7 @@
 ﻿@page "/debug"
 @using System.Text.Json
 @using System.IO
+@using CommunityToolkit.Maui.Storage
 @inject IJSRuntime JSRuntime
 
 <h3>Debug Information</h3>
@@ -26,28 +27,37 @@
 </div>
 
 <div class="debug-section">
-    <div class="log-header">
-        <h4>Log Content</h4>
-        <button class="btn btn-danger" @onclick="ClearLogFile">Clear Log</button>
-    </div>
-    
-    @if (string.IsNullOrEmpty(_logErrorMessage))
+    <h4>Debug Log Files</h4>
+    @if (_logFiles.Count == 0)
     {
-        @if (string.IsNullOrEmpty(_logContent))
-        {
-            <div class="alert alert-info">Loading log content...</div>
-        }
-        else
-        {
-            <div class="log-display">
-                <pre>@_logContent</pre>
-            </div>
-        }
+            <div class="alert alert-info">No debug log files found.</div>
     }
     else
     {
-        <div class="alert alert-danger">@_logErrorMessage</div>
+            <ul>
+            @foreach (var logFile in _logFiles)
+            {
+                        <li>
+                            <strong>@Path.GetFileName(logFile)</strong>
+                            <button class="btn btn-primary" @onclick="() => OpenLogFile(logFile)">Open</button>
+                            <button class="btn btn-secondary" @onclick="() => SaveLogFile(logFile)">Save</button>
+                        </li>
+            }
+            </ul>
     }
+</div>
+
+<!-- Custom Modal Dialog -->
+<div id="customDialog" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h4 id="dialogTitle"></h4>
+            <span class="close-button" onclick="closeCustomDialog()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <pre id="dialogContent"></pre>
+        </div>
+    </div>
 </div>
 
 <style>
@@ -66,6 +76,55 @@
         white-space: pre-wrap;
         word-wrap: break-word;
     }
+
+    /* Custom Modal Styles */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0,0,0,0.5);
+        z-index: 1000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .modal-content {
+        background-color: white;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 90%;
+        max-height: 90vh;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 15px;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .modal-body {
+        padding: 15px;
+        overflow-y: auto;
+        max-height: calc(90vh - 60px);
+    }
+
+    .close-button {
+        font-size: 24px;
+        cursor: pointer;
+        color: #555;
+    }
+
+    .close-button:hover {
+        color: black;
+    }
 </style>
 
 @code {
@@ -73,13 +132,45 @@
     private string _formattedJson = string.Empty;
     private string _errorMessage = string.Empty;
 
-    private string _logContent = string.Empty;
+    private List<string> _logFiles = new();
     private string _logErrorMessage = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadJsonContent();
-        await LoadLogContent();
+        LoadLogFiles();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await InitializeJavaScript();
+        }
+    }
+
+    private async Task InitializeJavaScript()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("eval", @"
+                window.showCustomDialog = function(title, content) {
+                    document.getElementById('dialogTitle').textContent = title;
+                    document.getElementById('dialogContent').textContent = content;
+                    document.getElementById('customDialog').style.display = 'flex';
+                };
+
+                window.closeCustomDialog = function() {
+                    document.getElementById('customDialog').style.display = 'none';
+                };
+            ");
+
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to initialize JavaScript";
+
+        }
     }
 
     private async Task LoadJsonContent()
@@ -99,60 +190,97 @@
             }
             else
             {
-                _errorMessage = "pills.json file not found in AppDataDirectory";
+                _errorMessage = "data.json file not found in AppDataDirectory";
             }
         }
         catch (Exception ex)
         {
             _errorMessage = $"Error loading JSON file: {ex.Message}";
+
         }
     }
 
-    private async Task LoadLogContent()
+    private void LoadLogFiles()
     {
         try
         {
-            // Load debug.log
-            var logFilePath = Path.Combine(FileSystem.AppDataDirectory, "debug.log");
+            var logDirectory = FileSystem.AppDataDirectory;
+            _logFiles = Directory.GetFiles(logDirectory, "debug*.log").ToList();
+        }
+        catch (Exception ex)
+        {
+            _logErrorMessage = $"Error loading log files: {ex.Message}";
 
-            if (File.Exists(logFilePath))
+        }
+    }
+
+    private async Task OpenLogFile(string filePath)
+    {
+        try
+        {
+            if (File.Exists(filePath))
             {
-                _logContent = await File.ReadAllTextAsync(logFilePath);
+                var content = await File.ReadAllTextAsync(filePath);
+                var fileName = Path.GetFileName(filePath);
+
+                await JSRuntime.InvokeVoidAsync("showCustomDialog", fileName, content);
             }
             else
             {
-                _logErrorMessage = "debug.log file not found in AppDataDirectory";
+                _logErrorMessage = $"File not found: {filePath}";
+
             }
         }
         catch (Exception ex)
         {
-            _logErrorMessage = $"Error loading log file: {ex.Message}";
+            _errorMessage = $"Error opening log file: {ex.Message}";
+
         }
     }
 
-    private async Task ClearLogFile()
+    private async Task SaveLogFile(string filePath)
     {
         try
         {
-            var logFilePath = Path.Combine(FileSystem.AppDataDirectory, "debug.log");
-
-            if (File.Exists(logFilePath))
+            // Check if file exists
+            if (!File.Exists(filePath))
             {
-                // Clear the file by writing an empty string to it
-                await File.WriteAllTextAsync(logFilePath, string.Empty);
+                _errorMessage = $"File not found: {filePath}";
+                return;
+            }
 
-                // Reload the log content to show the empty file
-                _logContent = string.Empty;
-                _logErrorMessage = string.Empty;
+            // Read the file content
+            var fileContent = await File.ReadAllTextAsync(filePath);
+
+            // Get the filename
+            var fileName = Path.GetFileName(filePath);
+
+            // Create file type based on extension (logs are text files)
+            var fileType = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
+            {
+                { DevicePlatform.Android, new[] { "text/plain" } }
+            });
+
+            using FileStream fileStream = File.OpenRead(filePath);
+
+            // Save the file to a location accessible by the user
+            var result = await FileSaver.SaveAsync(filePath, fileName, fileStream, new CancellationTokenSource().Token);
+
+            Thread.Sleep(1000); // Simulate some delay
+
+            if (result.IsSuccessful)
+            {
+                // Show success message using JS alert
+                await JSRuntime.InvokeVoidAsync("alert", $"Log file saved successfully to: {result.FilePath}");
             }
             else
             {
-                _logErrorMessage = "debug.log file not found in AppDataDirectory";
+                //_errorMessage = $"Failed to save log file: {result.Exception?.Message ?? "Unknown error"}";
             }
         }
         catch (Exception ex)
         {
-            _logErrorMessage = $"Error clearing log file: {ex.Message}";
+            _errorMessage = $"Error saving log file: {ex.Message}";
         }
     }
 }

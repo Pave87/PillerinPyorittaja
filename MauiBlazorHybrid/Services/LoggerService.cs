@@ -23,7 +23,34 @@ namespace MauiBlazorHybrid.Services
         public LoggerService()
         {
             // Set the log file path to a writable directory
-            _logFilePath = Path.Combine(FileSystem.AppDataDirectory, "debug.log");
+            var date = DateTime.Now.ToString("yyyy-MM-dd");
+            _logFilePath = Path.Combine(FileSystem.AppDataDirectory, $"debug-{date}.log");
+            ManageLogFiles();
+        }
+
+        private void ManageLogFiles()
+        {
+            try
+            {
+                // Get all debug*.log files in the AppDataDirectory
+                var logFiles = Directory.GetFiles(FileSystem.AppDataDirectory, "debug*.log");
+
+                // Order files by last write time in descending order (most recent first)
+                var orderedFiles = logFiles
+                    .OrderByDescending(File.GetLastWriteTime)
+                    .ToList();
+
+                // Skip the first 3 files (most recent) and delete the rest
+                foreach (var file in orderedFiles.Skip(3))
+                {
+                    File.Delete(file);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log any exceptions that occur during file management
+                Log($"Error managing log files: {ex.Message}");
+            }
         }
 
         public void Log(Exception exception)
