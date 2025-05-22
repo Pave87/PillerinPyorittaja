@@ -112,7 +112,6 @@ else
                                                 }
 
                                             </div>
-                                            @*                                     <button class="take-product-button" @onclick="() => TakeProductDose(product.Id, dosage.AmountTaken)">@L("Take_Dose")</button> *@
                                         </li>
                                     }
                                 </ul>
@@ -466,24 +465,5 @@ else
             await ProductService.AddPacketAsync(productId, product.AmountPerPackage);
             await LoadProducts();
         }
-    }
-
-    private async Task TakeProductDose(int productId, double amountTaken)
-    {
-        var success = await ProductService.TakeProductDoseAsync(productId, amountTaken);
-
-        if (success)
-        {
-            // Inform user of successful action
-            await JS.InvokeVoidAsync("alert", L("Dose_Taken_Successfully"));
-        }
-        else
-        {
-            // Inform user of failed action
-            await JS.InvokeVoidAsync("alert", L("Not_Enough_Product_Remaining"));
-        }
-
-        // Refresh the product list to show updated quantities
-        await LoadProducts();
     }
 }
