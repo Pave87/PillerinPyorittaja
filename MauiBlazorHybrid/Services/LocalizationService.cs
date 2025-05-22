@@ -17,7 +17,7 @@ namespace MauiBlazorHybrid.Services
         public LocalizationService()
         {
             _loggerService = new LoggerService();
-            _loggerService.Log("Initalizing LocalizationService...");
+            _loggerService.Log("LocalizationService", "Initalizing...");
             // Point to your resource file
             _resourceManager = new ResourceManager("MauiBlazorHybrid.Resources.Localization.AppResources",
                                                  typeof(LocalizationService).Assembly);
@@ -31,7 +31,7 @@ namespace MauiBlazorHybrid.Services
             CultureInfo.CurrentCulture = _currentCulture;
             CultureInfo.CurrentUICulture = _currentCulture;
 
-            _loggerService.Log("LocalizationService initialized with culture: " + _currentCulture.Name);
+            _loggerService.Log("LocalizationService", "Initialized with culture: " + _currentCulture.Name);
         }
 
         public string GetString(string key)

@@ -38,10 +38,10 @@ namespace MauiBlazorHybrid.Services
 
         public NotificationService(ILocalizationService localizationService)
         {
-            _loggerService.Log("Initializing NotificationService...");
+            _loggerService.Log("NotificationService", "Initializing...");
             _localizationService = localizationService;
             _initialized = true;
-            _loggerService.Log("NotificationService initialized.");
+            _loggerService.Log("NotificationService", "Initialized.");
         }
 
         // Helper method to get localized text
@@ -53,7 +53,7 @@ namespace MauiBlazorHybrid.Services
             {
                 Task.Delay(100);
                 retryCount++;
-                _loggerService.Log($"Waiting for NotificationService to initialize... Attempt {retryCount}");
+                _loggerService.Log($"NotificationService", "Waiting for NotificationService to initialize... Attempt {retryCount}");
             }
             return _localizationService.GetString(key);
         }
@@ -67,7 +67,7 @@ namespace MauiBlazorHybrid.Services
             {
                 Task.Delay(100);
                 retryCount++;
-                _loggerService.Log($"Waiting for NotificationService to initialize... Attempt {retryCount}");
+                _loggerService.Log($"NotificationService", "Waiting for NotificationService to initialize... Attempt {retryCount}");
             }
             return _localizationService.Format(key, parameters);
         }
@@ -75,7 +75,7 @@ namespace MauiBlazorHybrid.Services
         public async Task<bool> RequestPermissionAsync()
         {
             bool permissionGranted = false;
-            _loggerService.Log("Requesting notification permissions...");
+            _loggerService.Log("NotificationService", "Requesting notification permissions...");
 #if ANDROID
             try
             {
@@ -95,7 +95,7 @@ namespace MauiBlazorHybrid.Services
                 // If permission granted, also set up the alarm permissions
                 if (permissionGranted)
                 {
-                    _loggerService.Log("Notification permission granted.");
+                    _loggerService.Log("NotificationService", "Notification permission granted.");
                     // For Android 12+ we need to ask for SCHEDULE_EXACT_ALARM permission
                     if (OperatingSystem.IsAndroidVersionAtLeast(31))
                     {
@@ -118,7 +118,7 @@ namespace MauiBlazorHybrid.Services
             }
             catch (System.Exception ex)
             {
-                _loggerService.Log($"Error requesting permissions: {ex.Message}");
+                _loggerService.Log("NotificationService", $"Error requesting permissions: {ex.Message}");
                 permissionGranted = false;
             }
 #else
@@ -131,7 +131,7 @@ namespace MauiBlazorHybrid.Services
 
         public async Task ScheduleNotificationAsync(Product product, DosageSchedule dosage)
         {
-            _loggerService.Log($"Scheduling notification for product {product.Id} with dosage ID {dosage.Id}");
+            _loggerService.Log("NotificationService", $"Scheduling notification for product {product.Id} with dosage ID {dosage.Id}");
             // Find the most recent history entry for this dosage
             var lastTaken = product.History
                 ?.Where(h => h.DosageId == dosage.Id)
@@ -152,7 +152,7 @@ namespace MauiBlazorHybrid.Services
                 };
             var toast = Toast.Make(LF("Reminder_Scheduled_For", reminderParams), ToastDuration.Short);
             await toast.Show();
-            _loggerService.Log($"Notification scheduled for {product.Id} at {nextDoseTime}");
+            _loggerService.Log("NotificationService", $"Notification scheduled for {product.Id} at {nextDoseTime}");
         }
 
         public async Task ScheduleNotificationAsync(Product product, DosageSchedule dosage, DateTime nextDoseTime)
@@ -313,7 +313,7 @@ namespace MauiBlazorHybrid.Services
         {
             try
             {
-                _loggerService.Log($"Scheduling notification for product {product.Id} at {scheduleTime}");
+                _loggerService.Log("NotificationService", $"Scheduling notification for product {product.Id} at {scheduleTime}");
                 await _semaphore.WaitAsync();
 
                 if (notificationId == null)
@@ -345,7 +345,7 @@ namespace MauiBlazorHybrid.Services
             {
                 _semaphore.Release();
             }
-            _loggerService.Log($"Notification scheduled for product {product.Id} at {scheduleTime}");
+            _loggerService.Log("NotificationService", $"Notification scheduled for product {product.Id} at {scheduleTime}");
         }
 
 #if ANDROID
@@ -353,7 +353,7 @@ namespace MauiBlazorHybrid.Services
         {
             try
             {
-                _loggerService.Log($"Scheduling Android alarm for product {product.Id} at {scheduleTime}");
+                _loggerService.Log("NotificationService", $"Scheduling Android alarm for product {product.Id} at {scheduleTime}");
                 var context = Android.App.Application.Context;
 
                 // Cancel any existing alarms for this notification
@@ -417,12 +417,12 @@ namespace MauiBlazorHybrid.Services
                         alarmManager.SetExact(AlarmType.RtcWakeup, triggerAtMillis, pendingIntent);
                     }
 
-                    _loggerService.Log($"Scheduled Android alarm for {product.Name} at {scheduleTime}");
+                    _loggerService.Log("NotificationService", $"Scheduled Android alarm for {product.Name} at {scheduleTime}");
                 }
             }
             catch (System.Exception ex)
             {
-                _loggerService.Log($"Error scheduling Android alarm: {ex.Message}");
+                _loggerService.Log("NotificationService", $"Error scheduling Android alarm: {ex.Message}");
             }
         }
 
@@ -454,7 +454,7 @@ namespace MauiBlazorHybrid.Services
             }
             catch (System.Exception ex)
             {
-                _loggerService.Log($"Error canceling alarm: {ex.Message}");
+                _loggerService.Log("NotificationService", $"Error canceling alarm: {ex.Message}");
             }
         }
 #endif
@@ -486,7 +486,7 @@ namespace MauiBlazorHybrid.Services
                                     int notificationId = GenerateNotificationId(productId, dosage.Id);
                                     CancelAndroidAlarm(notificationId);
                                 }
-                                _loggerService.Log($"Canceled {product.Dosages.Count} notifications for product {productId}");
+                                _loggerService.Log("NotificationService", $"Canceled {product.Dosages.Count} notifications for product {productId}");
                                 return;
                             }
                         }
@@ -494,7 +494,7 @@ namespace MauiBlazorHybrid.Services
                 }
                 catch (System.Exception ex)
                 {
-                    _loggerService.Log($"Error canceling notifications for product {productId}: {ex.Message}");
+                    _loggerService.Log("NotificationService", $"Error canceling notifications for product {productId}: {ex.Message}");
                 }
 #endif
             }
@@ -545,7 +545,7 @@ namespace MauiBlazorHybrid.Services
                 // Skip showing notifications for boot completed events
                 if (intent.Action == Intent.ActionBootCompleted)
                 {
-                    _loggerService.Log("Device reboot detected. Not showing notifications immediately.");
+                    _loggerService.Log("NotificationService", "Device reboot detected. Not showing notifications immediately.");
                     return;
                 }
 
@@ -608,7 +608,7 @@ namespace MauiBlazorHybrid.Services
                 resultIntent.PutExtra("dosageId", dosageId);
                 resultIntent.PutExtra("remind_later", false);
 
-                _loggerService.Log($"Setting notification intent with action=edit_reminder, productId={productId}, dosageId={dosageId}");
+                _loggerService.Log("NotificationService", $"Setting notification intent with action=edit_reminder, productId={productId}, dosageId={dosageId}");
 
                 // Create pending intent
                 PendingIntentFlags flags = PendingIntentFlags.UpdateCurrent;
@@ -701,7 +701,7 @@ namespace MauiBlazorHybrid.Services
                     catch (System.Exception ex)
                     {
                         canShowNotification = false;
-                        _loggerService.Log($"Error checking notification permission: {ex.Message}");
+                        _loggerService.Log("NotificationService", $"Error checking notification permission: {ex.Message}");
                     }
                 }
 
@@ -728,14 +728,14 @@ namespace MauiBlazorHybrid.Services
                     }
                     catch (System.Exception ex)
                     {
-                        _loggerService.Log($"Error vibrating device: {ex.Message}");
+                        _loggerService.Log("NotificationService", $"Error vibrating device: {ex.Message}");
                         // Ignore vibration errors
                     }
                 }
             }
             catch (System.Exception ex)
             {
-                _loggerService.Log($"Error in NotificationAlarmReceiver: {ex.Message}");
+                _loggerService.Log("NotificationService", $"Error in NotificationAlarmReceiver: {ex.Message}");
             }
         }
     }
@@ -757,7 +757,7 @@ namespace MauiBlazorHybrid.Services
                 int dosageId = intent.GetIntExtra("dosageId", 0);
                 double amount = intent.GetDoubleExtra("amount", 0);
 
-                _loggerService.Log($"Action received: {action} for notification ID: {notificationId}");
+                _loggerService.Log("NotificationService", $"Action received: {action} for notification ID: {notificationId}");
 
                 // Always cancel the notification when an action is taken
                 var notificationManager = NotificationManagerCompat.From(context);
@@ -765,7 +765,7 @@ namespace MauiBlazorHybrid.Services
 
                 if (action == "take_now_action")
                 {
-                    _loggerService.Log($"Take Now action triggered for notification ID: {notificationId}");
+                    _loggerService.Log("NotificationService", $"Take Now action triggered for notification ID: {notificationId}");
 
                     // Get the IProductService instance from the application context
                     var productService = GetProductService(context);
@@ -789,7 +789,7 @@ namespace MauiBlazorHybrid.Services
                                 toastIntent.PutExtra("message", toastMessage);
                                 context.SendBroadcast(toastIntent);
 
-                                _loggerService.Log($"TakeProductDoseAsync completed with result: {result}");
+                                _loggerService.Log("NotificationService", $"TakeProductDoseAsync completed with result: {result}");
 
                                                      // After taking dose, schedule notifications
                                 if (result)
@@ -811,7 +811,7 @@ namespace MauiBlazorHybrid.Services
                                                 if (dosage.NextDose.HasValue)
                                                 {
                                                     await notificationService.ScheduleNotificationAsync(product, dosage, dosage.NextDose.Value);
-                                                    _loggerService.Log($"Rescheduled notification for product {productId}, dosage {dosage.Id} at {dosage.NextDose.Value}");
+                                                    _loggerService.Log("NotificationService", $"Rescheduled notification for product {productId}, dosage {dosage.Id} at {dosage.NextDose.Value}");
                                                 }
                                             }
                                         }
@@ -820,18 +820,18 @@ namespace MauiBlazorHybrid.Services
                             }
                             catch (System.Exception ex)
                             {
-                                _loggerService.Log($"Error taking dose: {ex.Message}");
+                                _loggerService.Log("NotificationService", $"Error taking dose: {ex.Message}");
                             }
                         });
                     }
                     else
                     {
-                        _loggerService.Log("Failed to get ProductService instance for TakeNow action");
+                        _loggerService.Log("NotificationService", "Failed to get ProductService instance for TakeNow action");
                     }
                 }
                 else if (action == "remind_15_action")
                 {
-                    _loggerService.Log($"Remind 15 Minutes action triggered for notification ID: {notificationId}");
+                    _loggerService.Log("NotificationService", $"Remind 15 Minutes action triggered for notification ID: {notificationId}");
 
                     // Schedule a new notification 15 minutes from now
                     Task.Run(async () =>
@@ -854,7 +854,7 @@ namespace MauiBlazorHybrid.Services
                                         if (dosage != null)
                                         {
                                             await notificationService.ScheduleNotificationAsync(product, dosage, remindTime, notificationId);
-                                            _loggerService.Log($"Scheduled reminder in 15 minutes for product ID: {productId}, dosage ID: {dosageId}");
+                                            _loggerService.Log("NotificationService", $"Scheduled reminder in 15 minutes for product ID: {productId}, dosage ID: {dosageId}");
                                         }
                                     }
                                 }
@@ -862,14 +862,14 @@ namespace MauiBlazorHybrid.Services
                         }
                         catch (System.Exception ex)
                         {
-                            _loggerService.Log($"Error scheduling reminder in 15 minutes: {ex.Message}");
+                            _loggerService.Log("NotificationService", $"Error scheduling reminder in 15 minutes: {ex.Message}");
                         }
                     });
                 }
             }
             catch (System.Exception ex)
             {
-                _loggerService.Log($"Error in NotificationActionReceiver: {ex.Message}");
+                _loggerService.Log("NotificationService", $"Error in NotificationActionReceiver: {ex.Message}");
             }
         }
 
@@ -897,7 +897,7 @@ namespace MauiBlazorHybrid.Services
             }
             catch (System.Exception ex)
             {
-                _loggerService.Log($"Error getting ProductService: {ex.Message}");
+                _loggerService.Log("NotificationService", $"Error getting ProductService: {ex.Message}");
                 return null;
             }
         }
@@ -926,7 +926,7 @@ namespace MauiBlazorHybrid.Services
             }
             catch (System.Exception ex)
             {
-                _loggerService.Log($"Error getting NotificationService: {ex.Message}");
+                _loggerService.Log("NotificationService", $"Error getting NotificationService: {ex.Message}");
                 return null;
             }
         }

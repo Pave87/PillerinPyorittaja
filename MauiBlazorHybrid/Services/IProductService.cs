@@ -1,5 +1,4 @@
-﻿// MauiBlazorHybrid/Services/IPillService.cs
-using MauiBlazorHybrid.Models;
+﻿using MauiBlazorHybrid.Models;
 
 namespace MauiBlazorHybrid.Services;
 

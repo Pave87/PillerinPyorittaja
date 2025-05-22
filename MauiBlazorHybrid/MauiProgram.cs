@@ -39,7 +39,7 @@ namespace MauiBlazorHybrid
 
             // Resolve ILoggerService and log the message
             var loggerService = app.Services.GetService<ILoggerService>();
-            loggerService?.Log("--------------------------Builder done--------------------------");
+            loggerService?.Log("MainProgram", "--------------------------Builder done--------------------------");
 
             return app;
         }

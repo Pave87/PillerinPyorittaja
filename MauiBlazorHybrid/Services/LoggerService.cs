@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Maui.Storage;
@@ -49,25 +50,55 @@ namespace MauiBlazorHybrid.Services
             catch (Exception ex)
             {
                 // Log any exceptions that occur during file management
-                Log($"Error managing log files: {ex.Message}");
+                Log("LoggerService", $"Error managing log files: {ex.Message}");
             }
         }
 
-        public void Log(Exception exception)
+        /// <summary>
+        /// Logs a message to the log file and debug output.
+        /// </summary>
+        /// <param name="logger">Name of function that sends this log line</param>
+        /// <param name="exception">Exception</param>
+        public void Log(string logger, Exception exception)
         {
             if (_isLoggingEnabled)
             {
-                Log($"{exception.Message}{Environment.NewLine}{exception.StackTrace}");
+                Log(logger, $"{exception.Message}{Environment.NewLine}{exception.StackTrace}");
             }
         }
 
-        public void Log(string message)
+
+        /// <summary>
+        /// Logs a message to the log file and debug output.
+        /// </summary>
+        /// <param name="logger">Name of function that sends this log line</param>
+        /// <param name="message">Log message</param>
+        public void Log(string logger, string message)
         {
             if (_isLoggingEnabled)
             {
-                var fullMessage = $"[{DateTime.Now:dd.MM.yyyy HH:mm:ss.fff}] {message}{Environment.NewLine}{Environment.NewLine}";
+                var fullMessage = $"[{DateTime.Now:dd.MM.yyyy HH:mm:ss.fff}] {logger}: {message}{Environment.NewLine}{Environment.NewLine}";
                 File.AppendAllText(_logFilePath, fullMessage);
                 Debug.Write(fullMessage);
+#if DEBUG
+                SendLogToHost(fullMessage);
+#endif
+            }
+        }
+
+        private void SendLogToHost(string message)
+        {
+            try
+            {
+                using var client = new TcpClient();
+                client.Connect("10.0.2.2", 5000); // 10.0.2.2 is the host from emulator
+                using var stream = client.GetStream();
+                var data = Encoding.UTF8.GetBytes(message);
+                stream.Write(data, 0, data.Length);
+            }
+            catch
+            {
+                // Ignore network errors in logging
             }
         }
     }

@@ -8,7 +8,7 @@ namespace MauiBlazorHybrid.Services
 {
     internal interface ILoggerService
     {
-        void Log(string message);
-        void Log(Exception exception);
+        void Log(string logger, string message);
+        void Log(string logger, Exception exception);
     }
 }

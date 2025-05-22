@@ -25,7 +25,7 @@ namespace MauiBlazorHybrid
 
         protected override void OnCreate(Bundle savedInstanceState)
         {
-            _loggerService.Log("MainActivity: OnCreate called");
+            _loggerService.Log("MainActivity", "OnCreate called");
             base.OnCreate(savedInstanceState);
 
             // Process the intent
@@ -34,18 +34,18 @@ namespace MauiBlazorHybrid
 
         protected override void OnNewIntent(Intent intent)
         {
-            _loggerService.Log("MainActivity: OnNewIntent called");
+            _loggerService.Log("MainActivity", "OnNewIntent called");
             base.OnNewIntent(intent);
             ProcessIntent(intent);
         }
 
         private void ProcessIntent(Android.Content.Intent intent)
         {
-            _loggerService.Log("MainActivity: ProcessIntent called");
+            _loggerService.Log("MainActivity", "ProcessIntent called");
             if (intent != null && intent.HasExtra("action"))
             {
                 string action = intent.GetStringExtra("action");
-                _loggerService.Log($"MainActivity: Intent action: {action}");
+                _loggerService.Log($"MainActivity", "Intent action: {action}");
 
                 if (action == "edit_reminder")
                 {
@@ -61,7 +61,7 @@ namespace MauiBlazorHybrid
                         PendingDosageId = dosageId;
                         IsRemindLater = remindLater;
 
-                        _loggerService.Log($"MainActivity: Processed intent with productId={productId}, dosageId={dosageId}, remindLater={remindLater}");
+                        _loggerService.Log($"MainActivity", "Processed intent with productId={productId}, dosageId={dosageId}, remindLater={remindLater}");
                     }
                 }
                 else if (action == "take_now_action")
@@ -76,7 +76,7 @@ namespace MauiBlazorHybrid
                         Task.Run(async () =>
                         {
                             bool success = await productService.TakeProductDoseAsync(productId, amount, dosageId);
-                            _loggerService.Log($"MainActivity: Processed take_now_action with productId={productId}, dosageId={dosageId}, amount={amount}, success={success}");
+                            _loggerService.Log($"MainActivity", "Processed take_now_action with productId={productId}, dosageId={dosageId}, amount={amount}, success={success}");
                         });
                     }
                 }
@@ -105,21 +105,21 @@ namespace MauiBlazorHybrid
                                         DateTime remindTime = DateTime.Now.AddMinutes(15);
                                         var notificationId = productId * 1000 + dosageId * 10 + 2;
                                         await notificationService.ScheduleNotificationAsync(product, dosage, remindTime, notificationId);
-                                        _loggerService.Log($"MainActivity: Scheduled remind_15_action for productId={productId}, dosageId={dosageId} at {remindTime}");
+                                        _loggerService.Log($"MainActivity", "Scheduled remind_15_action for productId={productId}, dosageId={dosageId} at {remindTime}");
                                     }
                                     else
                                     {
-                                        _loggerService.Log($"MainActivity: Dosage with ID {dosageId} not found for productId={productId}");
+                                        _loggerService.Log($"MainActivity", "Dosage with ID {dosageId} not found for productId={productId}");
                                     }
                                 }
                                 else
                                 {
-                                    _loggerService.Log($"MainActivity: Product with ID {productId} not found");
+                                    _loggerService.Log($"MainActivity", "Product with ID {productId} not found");
                                 }
                             }
                             catch (Exception ex)
                             {
-                                _loggerService.Log($"MainActivity: Error processing remind_15_action: {ex.Message}");
+                                _loggerService.Log($"MainActivity", "Error processing remind_15_action: {ex.Message}");
                             }
                         });
                     }
