@@ -16,22 +16,25 @@ namespace MauiBlazorHybrid.Services
 
         public LocalizationService()
         {
-            _loggerService = new LoggerService();
-            _loggerService.Log("LocalizationService", "Initalizing...");
-            // Point to your resource file
-            _resourceManager = new ResourceManager("MauiBlazorHybrid.Resources.Localization.AppResources",
-                                                 typeof(LocalizationService).Assembly);
+            using (CallContext.BeginCall())
+            {
+                _loggerService = new LoggerService();
+                _loggerService.Log("Initalizing...");
+                // Point to your resource file
+                _resourceManager = new ResourceManager("MauiBlazorHybrid.Resources.Localization.AppResources",
+                                                     typeof(LocalizationService).Assembly);
 
-            // Load preferred culture from preferences or use system default
-            var savedCulture = Preferences.Get(PreferenceKey, string.Empty);
-            _currentCulture = string.IsNullOrEmpty(savedCulture)
-                ? CultureInfo.CurrentCulture
-                : new CultureInfo(savedCulture);
+                // Load preferred culture from preferences or use system default
+                var savedCulture = Preferences.Get(PreferenceKey, string.Empty);
+                _currentCulture = string.IsNullOrEmpty(savedCulture)
+                    ? CultureInfo.CurrentCulture
+                    : new CultureInfo(savedCulture);
 
-            CultureInfo.CurrentCulture = _currentCulture;
-            CultureInfo.CurrentUICulture = _currentCulture;
+                CultureInfo.CurrentCulture = _currentCulture;
+                CultureInfo.CurrentUICulture = _currentCulture;
 
-            _loggerService.Log("LocalizationService", "Initialized with culture: " + _currentCulture.Name);
+                _loggerService.Log("Initialized with culture: " + _currentCulture.Name);
+            }
         }
 
         public string GetString(string key)

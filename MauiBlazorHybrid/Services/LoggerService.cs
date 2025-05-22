@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using Android.Service.Autofill;
 using Microsoft.Maui.Storage;
 
 namespace MauiBlazorHybrid.Services
@@ -59,11 +61,11 @@ namespace MauiBlazorHybrid.Services
         /// </summary>
         /// <param name="logger">Name of function that sends this log line</param>
         /// <param name="exception">Exception</param>
-        public void Log(string logger, Exception exception)
+        public void Log(Exception exception, [CallerMemberName] string memberName = "", [CallerFilePath] string filePath = "")
         {
             if (_isLoggingEnabled)
             {
-                Log(logger, $"{exception.Message}{Environment.NewLine}{exception.StackTrace}");
+                Log($"{exception.Message}{Environment.NewLine}{exception.StackTrace}", memberName, filePath);
             }
         }
 
@@ -73,11 +75,17 @@ namespace MauiBlazorHybrid.Services
         /// </summary>
         /// <param name="logger">Name of function that sends this log line</param>
         /// <param name="message">Log message</param>
-        public void Log(string logger, string message)
+        public void Log(string message, [CallerMemberName] string memberName = "", [CallerFilePath] string filePath = "")
         {
             if (_isLoggingEnabled)
             {
-                var fullMessage = $"[{DateTime.Now:dd.MM.yyyy HH:mm:ss.fff}] {logger}: {message}{Environment.NewLine}{Environment.NewLine}";
+                var callChain = CallContext.CurrentCallChain;
+                var callChainPart = !string.IsNullOrEmpty(callChain) ? $"[{callChain}]" : "";
+                var className = filePath.Split(new[] { '\\', '/' }).Last();
+                className = Path.GetFileNameWithoutExtension(className);
+                if (memberName == ".ctor") memberName = "Constructor";
+                if (memberName == ".cctor") memberName = "StaticConstructor";
+                var fullMessage = $"[{DateTime.Now:dd.MM.yyyy HH:mm:ss.fff}] {className}/{memberName} {callChainPart}: {message}{Environment.NewLine}{Environment.NewLine}";
                 File.AppendAllText(_logFilePath, fullMessage);
                 Debug.Write(fullMessage);
 #if DEBUG
@@ -102,4 +110,46 @@ namespace MauiBlazorHybrid.Services
             }
         }
     }
+
+    public static class CallContext
+    {
+        private static readonly AsyncLocal<CallChainInfo?> _current = new();
+        private static int _nextId = 0; // Numeric, incrementing for uniqueness
+
+        public static string? CurrentCallChain => _current.Value?.Chain;
+
+        public static IDisposable BeginCall()
+        {
+            var previous = _current.Value;
+            var newId = GetNextId();
+            string newChain = previous == null ? newId : $"{previous.Chain}-{newId}";
+            _current.Value = new CallChainInfo
+            {
+                Chain = newChain,
+                Previous = previous
+            };
+            return new DisposableAction(() => _current.Value = previous);
+        }
+
+        private static string GetNextId()
+        {
+            // Use base36 for shortness (0-9, A-Z)
+            int id = Interlocked.Increment(ref _nextId);
+            return id.ToString();
+        }
+
+        private class CallChainInfo
+        {
+            public string Chain { get; set; } = "";
+            public CallChainInfo? Previous { get; set; }
+        }
+
+        private class DisposableAction : IDisposable
+        {
+            private readonly Action _onDispose;
+            public DisposableAction(Action onDispose) => _onDispose = onDispose;
+            public void Dispose() => _onDispose();
+        }
+    }
+
 }

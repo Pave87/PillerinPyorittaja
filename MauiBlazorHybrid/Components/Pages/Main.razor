@@ -9,6 +9,7 @@
 @inject INotificationService NotificationService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JS
+@inject ILoggerService LoggerService
 @inherits MauiBlazorHybrid.Extensions.LocalizeComponent
 
 @if (showVersionPopup)
@@ -561,217 +562,300 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        // Check version file first
-        await CheckVersionFile();
-
-        var settingsService = MauiProgram.Services.GetService<ISettingsService>();
-        ShowTodayTaken = settingsService?.ShowTodayTaken ?? false;
-
-        await CheckNotificationPermission();
-        await LoadProducts();
-        await LoadMissedDosages();
-        if (ShowTodayTaken)
+        using (CallContext.BeginCall())
         {
-            await LoadTakenDoses();
-        }
-        await OrganizeUpcomingDoses();
+            LoggerService.Log("OnInitializedAsync started");
+            try
+            {
+                // Check version file first
+                await CheckVersionFile();
 
-        await base.OnInitializedAsync();
-    
-        // Check if we have a pending reminder configuration from a notification
-        CheckForPendingReminderConfig();
+                var settingsService = MauiProgram.Services.GetService<ISettingsService>();
+                ShowTodayTaken = settingsService?.ShowTodayTaken ?? false;
+
+                await CheckNotificationPermission();
+                await LoadProducts();
+                await LoadMissedDosages();
+                if (ShowTodayTaken)
+                {
+                    await LoadTakenDoses();
+                }
+                await OrganizeUpcomingDoses();
+
+                await base.OnInitializedAsync();
+            
+                // Check if we have a pending reminder configuration from a notification
+                CheckForPendingReminderConfig();
+            }
+            catch (Exception ex)
+            {
+                LoggerService.Log(ex);
+            }
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await base.OnAfterRenderAsync(firstRender);
-    
-        if (firstRender)
+        using (CallContext.BeginCall())
         {
-            // Also check after first render to make sure the app is fully loaded
-            CheckForPendingReminderConfig();
+            LoggerService.Log($"OnAfterRenderAsync called, firstRender={firstRender}");
+            try
+            {
+                await base.OnAfterRenderAsync(firstRender);
+            
+                if (firstRender)
+                {
+                    // Also check after first render to make sure the app is fully loaded
+                    CheckForPendingReminderConfig();
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggerService.Log(ex);
+            }
         }
     }
 
     private async Task TakeConsumeByNeedProduct(int productId, double amount)
     {
-        var success = await ProductService.TakeProductDoseAsync(productId, amount);
-
-        if (success)
+        using (CallContext.BeginCall())
         {
-            var product = products?.FirstOrDefault(p => p.Id == productId);
-            if (product != null)
+            LoggerService.Log($"TakeConsumeByNeedProduct called for productId={productId}, amount={amount}");
+            try
             {
-                // Show toast notification for successful dose taking
-                string message = string.Format(L("Product_Dose_Taken"), product.Name);
-                var toast = Toast.Make(message, ToastDuration.Short, 14);
-                await toast.Show();
+                var success = await ProductService.TakeProductDoseAsync(productId, amount);
+
+                if (success)
+                {
+                    var product = products?.FirstOrDefault(p => p.Id == productId);
+                    if (product != null)
+                    {
+                        // Show toast notification for successful dose taking
+                        string message = string.Format(L("Product_Dose_Taken"), product.Name);
+                        var toast = Toast.Make(message, ToastDuration.Short, 14);
+                        await toast.Show();
+                    }
+                }
+
+                // Refresh the product list to show updated quantities
+                await LoadProducts();
+            }
+            catch (Exception ex)
+            {
+                LoggerService.Log(ex);
             }
         }
-
-        // Refresh the product list to show updated quantities
-        await LoadProducts();
     }
 
     private async Task LoadTakenDoses()
     {
-        try
+        using (CallContext.BeginCall())
         {
-            var allHistory = await ProductService.GetAllProductHistoryAsync();
-            var now = DateTime.Now;
-            takenDoses = allHistory
-                .Where(h => h.Timestamp >= now.AddHours(-24) && h.Event == EventType.Taken)
-                .ToList();
-        }
-        catch (Exception ex)
-        {
+            LoggerService.Log("LoadTakenDoses called");
+            try
+            {
+                var allHistory = await ProductService.GetAllProductHistoryAsync();
+                var now = DateTime.Now;
+                takenDoses = allHistory
+                    .Where(h => h.Timestamp >= now.AddHours(-24) && h.Event == EventType.Taken)
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                LoggerService.Log(ex);
+            }
         }
     }
 
-private void CheckForPendingReminderConfig()
-{
-#if ANDROID
-    if (MauiBlazorHybrid.MainActivity.HasPendingReminderConfig)
+    private void CheckForPendingReminderConfig()
     {
-        int productId = MauiBlazorHybrid.MainActivity.PendingProductId;
-        int dosageId = MauiBlazorHybrid.MainActivity.PendingDosageId;
-        
-        if (productId > 0 && dosageId > 0)
+        using (CallContext.BeginCall())
         {
-            // Navigate to the reminder configuration page
-            NavigationManager.NavigateTo($"/reminderconfig/{productId}/{dosageId}");
-            
-            // Clear the pending configuration to avoid duplicate navigation
-            MauiBlazorHybrid.MainActivity.ClearPendingReminderConfig();
+            LoggerService.Log("CheckForPendingReminderConfig called");
+    #if ANDROID
+            if (MauiBlazorHybrid.MainActivity.HasPendingReminderConfig)
+            {
+                int productId = MauiBlazorHybrid.MainActivity.PendingProductId;
+                int dosageId = MauiBlazorHybrid.MainActivity.PendingDosageId;
+                
+                if (productId > 0 && dosageId > 0)
+                {
+                    // Navigate to the reminder configuration page
+                    NavigationManager.NavigateTo($"/reminderconfig/{productId}/{dosageId}");
+                    
+                    // Clear the pending configuration to avoid duplicate navigation
+                    MauiBlazorHybrid.MainActivity.ClearPendingReminderConfig();
+                }
+            }
+    #endif
         }
     }
-#endif
-}
 
     private async Task CheckVersionFile()
     {
-        try
+        using (CallContext.BeginCall())
         {
-            // Get the app's local storage path
-            string appDataPath = FileSystem.AppDataDirectory;
-            versionFilePath = Path.Combine(appDataPath, "vers");
-            
-            bool fileExists = File.Exists(versionFilePath);
-            bool versionMatches = false;
-            
-            if (fileExists)
+            LoggerService.Log("CheckVersionFile called");
+            try
             {
-                // Read the version number from file
-                string versionText = await File.ReadAllTextAsync(versionFilePath);
-                versionMatches = (versionText == EXPECTED_VERSION);
-            }
-            
-            if (!fileExists || !versionMatches)
-            {
-                // Show the version popup
-                await ShowVersionPopup();
+                // Get the app's local storage path
+                string appDataPath = FileSystem.AppDataDirectory;
+                versionFilePath = Path.Combine(appDataPath, "vers");
                 
-                // Immediately update the version file (without waiting for user action)
-                await UpdateVersionFile();
+                bool fileExists = File.Exists(versionFilePath);
+                bool versionMatches = false;
+                
+                if (fileExists)
+                {
+                    // Read the version number from file
+                    string versionText = await File.ReadAllTextAsync(versionFilePath);
+                    versionMatches = (versionText == EXPECTED_VERSION);
+                }
+                
+                if (!fileExists || !versionMatches)
+                {
+                    // Show the version popup
+                    await ShowVersionPopup();
+                    
+                    // Immediately update the version file (without waiting for user action)
+                    await UpdateVersionFile();
+                }
             }
-        }
-        catch (Exception ex)
-        {
-            // Handle any exceptions (optional)
-            Console.WriteLine($"Error checking version file: {ex.Message}");
+            catch (Exception ex)
+            {
+                // Handle any exceptions (optional)
+                LoggerService.Log(ex);
+            }
         }
     }
     
     private async Task UpdateVersionFile()
     {
-        try
+        using (CallContext.BeginCall())
         {
-            // Ensure directory exists
-            string directory = Path.GetDirectoryName(versionFilePath);
-            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+            LoggerService.Log("UpdateVersionFile called");
+            try
             {
-                Directory.CreateDirectory(directory);
+                // Ensure directory exists
+                string directory = Path.GetDirectoryName(versionFilePath);
+                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+                
+                // Write the expected version to file
+                await File.WriteAllTextAsync(versionFilePath, EXPECTED_VERSION);
             }
-            
-            // Write the expected version to file
-            await File.WriteAllTextAsync(versionFilePath, EXPECTED_VERSION);
-        }
-        catch (Exception ex)
-        {
-            // Handle error (optional)
-            Console.WriteLine($"Error writing version file: {ex.Message}");
+            catch (Exception ex)
+            {
+                // Handle error (optional)
+                LoggerService.Log(ex);
+            }
         }
     }
     
     private async Task ShowVersionPopup()
     {
-        // First set the popup to be rendered
-        showVersionPopup = true;
-        
-        // Force immediate UI update
-        StateHasChanged();
-        
-        // Use a small delay before showing the animation to ensure DOM has updated
-        await Task.Delay(50);
-        
-        // Then make it visible with animation
-        isVersionPopupVisible = true;
-        StateHasChanged();
+        using (CallContext.BeginCall())
+        {
+            LoggerService.Log("ShowVersionPopup called");
+            // First set the popup to be rendered
+            showVersionPopup = true;
+            
+            // Force immediate UI update
+            StateHasChanged();
+            
+            // Use a small delay before showing the animation to ensure DOM has updated
+            await Task.Delay(50);
+            
+            // Then make it visible with animation
+            isVersionPopupVisible = true;
+            StateHasChanged();
+        }
     }
     
     private async Task HideVersionPopup()
     {
-        // Start the hiding animation
-        isVersionPopupVisible = false;
-        StateHasChanged();
-        
-        // Wait for animation to complete
-        await Task.Delay(300);
-        
-        // Remove from DOM
-        showVersionPopup = false;
-        StateHasChanged();
+        using (CallContext.BeginCall())
+        {
+            LoggerService.Log("HideVersionPopup called");
+            // Start the hiding animation
+            isVersionPopupVisible = false;
+            StateHasChanged();
+            
+            // Wait for animation to complete
+            await Task.Delay(300);
+            
+            // Remove from DOM
+            showVersionPopup = false;
+            StateHasChanged();
+        }
     }
 
     private async Task LoadProducts()
     {
-        products = await ProductService.GetProductsAsync();
+        using (CallContext.BeginCall())
+        {
+            LoggerService.Log("LoadProducts called");
+            try
+            {
+                products = await ProductService.GetProductsAsync();
+            }
+            catch (Exception ex)
+            {
+                LoggerService.Log(ex);
+            }
+        }
     }
 
     private async Task LoadMissedDosages()
     {
-        missedDosages = await ProductService.GetMissedDosagesAsync();
+        using (CallContext.BeginCall())
+        {
+            LoggerService.Log("LoadMissedDosages called");
+            try
+            {
+                missedDosages = await ProductService.GetMissedDosagesAsync();
+            }
+            catch (Exception ex)
+            {
+                LoggerService.Log(ex);
+            }
+        }
     }
 
     private async Task OrganizeUpcomingDoses()
     {
-        upcomingDoses.Clear();
-
-        if (products == null) return;
-
-        foreach (var product in products)
+        using (CallContext.BeginCall())
         {
-            DateTime? earliestDoseTime = null;
-            DosageSchedule? earliestDosage = null;
+            LoggerService.Log("OrganizeUpcomingDoses called");
+            upcomingDoses.Clear();
 
-            // Find the earliest upcoming dose for this product
-            foreach (var dosage in product.Dosages)
+            if (products == null) return;
+
+            foreach (var product in products)
             {
-                // Always use the NextDose property from the dosage
-                if (dosage.NextDose.HasValue)
+                DateTime? earliestDoseTime = null;
+                DosageSchedule? earliestDosage = null;
+
+                // Find the earliest upcoming dose for this product
+                foreach (var dosage in product.Dosages)
                 {
-                    if (earliestDoseTime == null || dosage.NextDose.Value < earliestDoseTime.Value)
+                    // Always use the NextDose property from the dosage
+                    if (dosage.NextDose.HasValue)
                     {
-                        earliestDoseTime = dosage.NextDose.Value;
-                        earliestDosage = dosage;
+                        if (earliestDoseTime == null || dosage.NextDose.Value < earliestDoseTime.Value)
+                        {
+                            earliestDoseTime = dosage.NextDose.Value;
+                            earliestDosage = dosage;
+                        }
                     }
                 }
-            }
 
-            // Add only the earliest dose for this product
-            if (earliestDoseTime.HasValue && earliestDosage != null)
-            {
-                upcomingDoses.Add(new UpcomingDose
+                // Add only the earliest dose for this product
+                if (earliestDoseTime.HasValue && earliestDosage != null)
+                {
+                    upcomingDoses.Add(new UpcomingDose
                     {
                         ProductId = product.Id,
                         ProductName = product.Name,
@@ -780,6 +864,7 @@ private void CheckForPendingReminderConfig()
                         Unit = product.Unit,
                         NextDoseTime = earliestDoseTime.Value
                     });
+                }
             }
         }
     }
@@ -851,167 +936,267 @@ private void CheckForPendingReminderConfig()
 
     private async Task CheckNotificationPermission()
     {
-        _permissionGranted = await NotificationService.RequestPermissionAsync();
-        StateHasChanged();
+        using (CallContext.BeginCall())
+        {
+            LoggerService.Log("CheckNotificationPermission called");
+            try
+            {
+                _permissionGranted = await NotificationService.RequestPermissionAsync();
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                LoggerService.Log(ex);
+            }
+        }
     }
 
     private async Task RequestNotificationPermission()
     {
-        _permissionGranted = await NotificationService.RequestPermissionAsync();
-        StateHasChanged();
+        using (CallContext.BeginCall())
+        {
+            LoggerService.Log("RequestNotificationPermission called");
+            try
+            {
+                _permissionGranted = await NotificationService.RequestPermissionAsync();
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                LoggerService.Log(ex);
+            }
+        }
     }
 
     private void NavigateToAddProduct()
     {
-        NavigationManager.NavigateTo("/addproduct");
+        using (CallContext.BeginCall())
+        {
+            LoggerService.Log("NavigateToAddProduct called");
+            NavigationManager.NavigateTo("/addproduct");
+        }
     }
 
     // New method to handle upcoming dose taking with confirmation when needed
     private async Task HandleUpcomingDoseTake(int productId, int dosageId, double amountTaken, DateTime scheduledTime, string productName)
     {
-        if (IsFarIntoFuture(scheduledTime))
+        using (CallContext.BeginCall())
         {
-            // Show in-page confirmation popup for doses more than 3 hours in the future
-            await ShowConfirmationPopup(productId, dosageId, amountTaken, scheduledTime, productName);
-        }
-        else
-        {
-            // Take the dose immediately for doses less than 3 hours away
-            await TakeProductDoseFromDosage(productId, dosageId, amountTaken);
+            LoggerService.Log($"HandleUpcomingDoseTake called for productId={productId}, dosageId={dosageId}, amountTaken={amountTaken}, scheduledTime={scheduledTime}");
+            try
+            {
+                if (IsFarIntoFuture(scheduledTime))
+                {
+                    // Show in-page confirmation popup for doses more than 3 hours in the future
+                    await ShowConfirmationPopup(productId, dosageId, amountTaken, scheduledTime, productName);
+                }
+                else
+                {
+                    // Take the dose immediately for doses less than 3 hours away
+                    await TakeProductDoseFromDosage(productId, dosageId, amountTaken);
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggerService.Log(ex);
+            }
         }
     }
 
     // Shows the in-page confirmation popup
     private async Task ShowConfirmationPopup(int productId, int dosageId, double amountTaken, DateTime scheduledTime, string productName)
     {
-        pendingConfirmation = new PendingConfirmation
-            {
-                ProductId = productId,
-                DosageId = dosageId,
-                AmountTaken = amountTaken,
-                NextDoseTime = scheduledTime,
-                ProductName = productName
-            };
+        using (CallContext.BeginCall())
+        {
+            LoggerService.Log($"ShowConfirmationPopup called for productId={productId}, dosageId={dosageId}, amountTaken={amountTaken}, scheduledTime={scheduledTime}");
+            pendingConfirmation = new PendingConfirmation
+                {
+                    ProductId = productId,
+                    DosageId = dosageId,
+                    AmountTaken = amountTaken,
+                    NextDoseTime = scheduledTime,
+                    ProductName = productName
+                };
 
-        // First set the popup to be rendered
-        showConfirmationPopup = true;
+            // First set the popup to be rendered
+            showConfirmationPopup = true;
 
-        // Force immediate UI update
-        StateHasChanged();
+            // Force immediate UI update
+            StateHasChanged();
 
-        // Use a small delay before showing the animation to ensure DOM has updated
-        await Task.Delay(50);
+            // Use a small delay before showing the animation to ensure DOM has updated
+            await Task.Delay(50);
 
-        // Then make it visible with animation
-        isConfirmationPopupVisible = true;
-        StateHasChanged();
+            // Then make it visible with animation
+            isConfirmationPopupVisible = true;
+            StateHasChanged();
+        }
     }
 
     // Hides the in-page confirmation popup
     private async Task HideConfirmationPopup()
     {
-        // Start the hiding animation
-        isConfirmationPopupVisible = false;
-        StateHasChanged();
+        using (CallContext.BeginCall())
+        {
+            LoggerService.Log("HideConfirmationPopup called");
+            // Start the hiding animation
+            isConfirmationPopupVisible = false;
+            StateHasChanged();
 
-        // Wait for animation to complete
-        await Task.Delay(300);
+            // Wait for animation to complete
+            await Task.Delay(300);
 
-        // Remove from DOM
-        showConfirmationPopup = false;
-        StateHasChanged();
+            // Remove from DOM
+            showConfirmationPopup = false;
+            StateHasChanged();
+        }
     }
 
     // Confirms taking the dose from the popup
     private async Task ConfirmTakeDose()
     {
-        await TakeProductDoseFromDosage(
-            pendingConfirmation.ProductId,
-            pendingConfirmation.DosageId,
-            pendingConfirmation.AmountTaken);
+        using (CallContext.BeginCall())
+        {
+            LoggerService.Log("ConfirmTakeDose called");
+            try
+            {
+                await TakeProductDoseFromDosage(
+                    pendingConfirmation.ProductId,
+                    pendingConfirmation.DosageId,
+                    pendingConfirmation.AmountTaken);
 
-        await HideConfirmationPopup();
+                await HideConfirmationPopup();
+            }
+            catch (Exception ex)
+            {
+                LoggerService.Log(ex);
+            }
+        }
     }
 
     private async Task TakeProductDoseFromDosage(int productId, int dosageId, double amountTaken)
     {
-        var success = await ProductService.TakeProductDoseAsync(productId, amountTaken, dosageId);
-
-        if (success)
+        using (CallContext.BeginCall())
         {
-            // Show toast notification for successful dose taking
-            var toast = Toast.Make(L("Dose_Taken_Successfully"));
-            await toast.Show();
-        }
+            LoggerService.Log($"TakeProductDoseFromDosage called for productId={productId}, dosageId={dosageId}, amountTaken={amountTaken}");
+            try
+            {
+                var success = await ProductService.TakeProductDoseAsync(productId, amountTaken, dosageId);
 
-        // Refresh the product list to show updated quantities and recalculated next dose times
-        await LoadProducts();
-        await LoadMissedDosages();
-        await OrganizeUpcomingDoses();
+                if (success)
+                {
+                    // Show toast notification for successful dose taking
+                    var toast = Toast.Make(L("Dose_Taken_Successfully"));
+                    await toast.Show();
+                }
+
+                // Refresh the product list to show updated quantities and recalculated next dose times
+                await LoadProducts();
+                await LoadMissedDosages();
+                await OrganizeUpcomingDoses();
+            }
+            catch (Exception ex)
+            {
+                LoggerService.Log(ex);
+            }
+        }
     }
 
     private async Task TakeMissedDosage(int productId, int dosageId, int missedDosageId, double amountTaken)
     {
-        var success = await ProductService.TakeMissedDosage(productId, missedDosageId, amountTaken);
-
-        if (success)
+        using (CallContext.BeginCall())
         {
-            var product = products?.FirstOrDefault(p => p.Id == productId);
-            if (product != null)
+            LoggerService.Log($"TakeMissedDosage called for productId={productId}, dosageId={dosageId}, missedDosageId={missedDosageId}, amountTaken={amountTaken}");
+            try
             {
-                // Show toast notification for successful missed dose taking
-                string message = string.Format(L("Dose_Taken_Successfully"), product.Name);
-                var toast = Toast.Make(message, ToastDuration.Short, 14);
-                await toast.Show();
+                var success = await ProductService.TakeMissedDosage(productId, missedDosageId, amountTaken);
+
+                if (success)
+                {
+                    var product = products?.FirstOrDefault(p => p.Id == productId);
+                    if (product != null)
+                    {
+                        // Show toast notification for successful missed dose taking
+                        string message = string.Format(L("Dose_Taken_Successfully"), product.Name);
+                        var toast = Toast.Make(message, ToastDuration.Short, 14);
+                        await toast.Show();
+                    }
+                }
+
+                // Refresh the data
+                await LoadProducts();
+                await LoadMissedDosages();
+                await OrganizeUpcomingDoses();
+            }
+            catch (Exception ex)
+            {
+                LoggerService.Log(ex);
             }
         }
-
-        // Refresh the data
-        await LoadProducts();
-        await LoadMissedDosages();
-        await OrganizeUpcomingDoses();
     }
 
     private async Task SkipMissedDosage(int productId, int missedDosageId)
     {
-        // Find the product
-        var product = products?.FirstOrDefault(p => p.Id == productId);
-        if (product == null) return;
-
-        var success = await ProductService.SkipMissedDosageAsync(productId, missedDosageId);
-
-        if (success)
+        using (CallContext.BeginCall())
         {
-            // Show toast notification for skipping the dose
-            string message = string.Format(L("Dose_Skipped"), product.Name);
-            var toast = Toast.Make(message, ToastDuration.Short, 14);
-            await toast.Show();
-        }
+            LoggerService.Log($"SkipMissedDosage called for productId={productId}, missedDosageId={missedDosageId}");
+            try
+            {
+                // Find the product
+                var product = products?.FirstOrDefault(p => p.Id == productId);
+                if (product == null) return;
 
-        // Refresh the data
-        await LoadProducts();
-        await LoadMissedDosages();
-        await OrganizeUpcomingDoses();
+                var success = await ProductService.SkipMissedDosageAsync(productId, missedDosageId);
+
+                if (success)
+                {
+                    // Show toast notification for skipping the dose
+                    string message = string.Format(L("Dose_Skipped"), product.Name);
+                    var toast = Toast.Make(message, ToastDuration.Short, 14);
+                    await toast.Show();
+                }
+
+                // Refresh the data
+                await LoadProducts();
+                await LoadMissedDosages();
+                await OrganizeUpcomingDoses();
+            }
+            catch (Exception ex)
+            {
+                LoggerService.Log(ex);
+            }
+        }
     }
 
     private async Task SkipMissedDose(MissedDose missedDose)
     {
-        // This is the legacy method, kept for backward compatibility
-        var skipHistory = new UsageHistory
+        using (CallContext.BeginCall())
+        {
+            LoggerService.Log($"SkipMissedDose (legacy) called for productId={missedDose.ProductId}, dosageId={missedDose.DosageId}");
+            try
             {
-                ProductId = missedDose.ProductId,
-                DosageId = missedDose.DosageId,
-                Timestamp = missedDose.ScheduledTime,
-                AmountTaken = 0, // 0 indicates a skipped dose
-                Event = EventType.Skipped
-            };
+                // This is the legacy method, kept for backward compatibility
+                var skipHistory = new UsageHistory
+                    {
+                        ProductId = missedDose.ProductId,
+                        DosageId = missedDose.DosageId,
+                        Timestamp = missedDose.ScheduledTime,
+                        AmountTaken = 0, // 0 indicates a skipped dose
+                        Event = EventType.Skipped
+                    };
 
-        await ProductService.AddProductHistoryManuallyAsync(skipHistory);
+                await ProductService.AddProductHistoryManuallyAsync(skipHistory);
 
-        // Recalculate doses
-        await LoadProducts();
-        await LoadMissedDosages();
-        await OrganizeUpcomingDoses();
+                // Recalculate doses
+                await LoadProducts();
+                await LoadMissedDosages();
+                await OrganizeUpcomingDoses();
+            }
+            catch (Exception ex)
+            {
+                LoggerService.Log(ex);
+            }
+        }
     }
 }
 

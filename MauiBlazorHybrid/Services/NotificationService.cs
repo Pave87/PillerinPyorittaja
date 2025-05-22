@@ -38,10 +38,13 @@ namespace MauiBlazorHybrid.Services
 
         public NotificationService(ILocalizationService localizationService)
         {
-            _loggerService.Log("NotificationService", "Initializing...");
-            _localizationService = localizationService;
-            _initialized = true;
-            _loggerService.Log("NotificationService", "Initialized.");
+            using (CallContext.BeginCall())
+            {
+                _loggerService.Log("Initializing...");
+                _localizationService = localizationService;
+                _initialized = true;
+                _loggerService.Log("Initialized.");
+            }
         }
 
         // Helper method to get localized text
@@ -53,7 +56,7 @@ namespace MauiBlazorHybrid.Services
             {
                 Task.Delay(100);
                 retryCount++;
-                _loggerService.Log($"NotificationService", "Waiting for NotificationService to initialize... Attempt {retryCount}");
+                _loggerService.Log("Waiting for NotificationService to initialize... Attempt {retryCount}");
             }
             return _localizationService.GetString(key);
         }
@@ -67,92 +70,99 @@ namespace MauiBlazorHybrid.Services
             {
                 Task.Delay(100);
                 retryCount++;
-                _loggerService.Log($"NotificationService", "Waiting for NotificationService to initialize... Attempt {retryCount}");
+                _loggerService.Log("Waiting for NotificationService to initialize... Attempt {retryCount}");
             }
             return _localizationService.Format(key, parameters);
         }
 
         public async Task<bool> RequestPermissionAsync()
         {
-            bool permissionGranted = false;
-            _loggerService.Log("NotificationService", "Requesting notification permissions...");
-#if ANDROID
-            try
+            using (CallContext.BeginCall())
             {
-                // For Android 13+ (API level 33+)
-                if (OperatingSystem.IsAndroidVersionAtLeast(33))
+                bool permissionGranted = false;
+                _loggerService.Log("Requesting notification permissions...");
+#if ANDROID
+                try
                 {
-                    // Request POST_NOTIFICATIONS permission for Android 13+
-                    var status = await Permissions.RequestAsync<Permissions.PostNotifications>();
-                    permissionGranted = status == PermissionStatus.Granted;
-                }
-                else
-                {
-                    // For older Android versions, no explicit permission needed
-                    permissionGranted = true;
-                }
-
-                // If permission granted, also set up the alarm permissions
-                if (permissionGranted)
-                {
-                    _loggerService.Log("NotificationService", "Notification permission granted.");
-                    // For Android 12+ we need to ask for SCHEDULE_EXACT_ALARM permission
-                    if (OperatingSystem.IsAndroidVersionAtLeast(31))
+                    // For Android 13+ (API level 33+)
+                    if (OperatingSystem.IsAndroidVersionAtLeast(33))
                     {
-                        var context = Android.App.Application.Context;
-                        var alarmManager = context.GetSystemService(Android.Content.Context.AlarmService) as AlarmManager;
+                        // Request POST_NOTIFICATIONS permission for Android 13+
+                        var status = await Permissions.RequestAsync<Permissions.PostNotifications>();
+                        permissionGranted = status == PermissionStatus.Granted;
+                    }
+                    else
+                    {
+                        // For older Android versions, no explicit permission needed
+                        permissionGranted = true;
+                    }
 
-                        if (alarmManager != null && !alarmManager.CanScheduleExactAlarms())
+                    // If permission granted, also set up the alarm permissions
+                    if (permissionGranted)
+                    {
+                        _loggerService.Log("Notification permission granted.");
+                        // For Android 12+ we need to ask for SCHEDULE_EXACT_ALARM permission
+                        if (OperatingSystem.IsAndroidVersionAtLeast(31))
                         {
-                            // Open system settings to enable exact alarms
-                            var intent = new Intent(Android.Provider.Settings.ActionRequestScheduleExactAlarm);
-                            intent.SetFlags(ActivityFlags.NewTask);
-                            context.StartActivity(intent);
+                            var context = Android.App.Application.Context;
+                            var alarmManager = context.GetSystemService(Android.Content.Context.AlarmService) as AlarmManager;
 
-                            // Show a localized toast explaining what to do
-                            var toast = Toast.Make(L("Enable_Alarm_Permission"), ToastDuration.Long);
-                            await toast.Show();
+                            if (alarmManager != null && !alarmManager.CanScheduleExactAlarms())
+                            {
+                                // Open system settings to enable exact alarms
+                                var intent = new Intent(Android.Provider.Settings.ActionRequestScheduleExactAlarm);
+                                intent.SetFlags(ActivityFlags.NewTask);
+                                context.StartActivity(intent);
+
+                                // Show a localized toast explaining what to do
+                                var toast = Toast.Make(L("Enable_Alarm_Permission"), ToastDuration.Long);
+                                await toast.Show();
+                            }
                         }
                     }
                 }
-            }
-            catch (System.Exception ex)
-            {
-                _loggerService.Log("NotificationService", $"Error requesting permissions: {ex.Message}");
-                permissionGranted = false;
-            }
+                catch (System.Exception ex)
+                {
+                    _loggerService.Log($"Error requesting permissions: {ex.Message}");
+                    permissionGranted = false;
+                }
 #else
                 // Default for other platforms
                 permissionGranted = true;
 #endif
 
-            return permissionGranted;
+                return permissionGranted;
+            }
         }
 
         public async Task ScheduleNotificationAsync(Product product, DosageSchedule dosage)
         {
-            _loggerService.Log("NotificationService", $"Scheduling notification for product {product.Id} with dosage ID {dosage.Id}");
-            // Find the most recent history entry for this dosage
-            var lastTaken = product.History
-                ?.Where(h => h.DosageId == dosage.Id)
-                .OrderByDescending(h => h.Timestamp)
-                .FirstOrDefault();
+            using (CallContext.BeginCall())
+            {
+                _loggerService.Log($"Scheduling notification for product {product.Id} with dosage ID {dosage.Id}");
+                // Find the most recent history entry for this dosage
+                var lastTaken = product.History
+                    ?.Where(h => h.DosageId == dosage.Id)
+                    .OrderByDescending(h => h.Timestamp)
+                    .FirstOrDefault();
 
-            // Calculate the next dose time based on last taken timestamp
-            DateTime nextDoseTime = CalculateNextDoseTime(dosage, lastTaken?.Timestamp);
+                _loggerService.Log($"Last taken time for product {product.Id} with dosage ID {dosage.Id}: {lastTaken?.Timestamp}");
+                // Calculate the next dose time based on last taken timestamp
+                DateTime nextDoseTime = CalculateNextDoseTime(dosage, lastTaken?.Timestamp);
 
-            // Schedule notification for the next dose
-            await ScheduleNotification(product, dosage, nextDoseTime, null);
+                // Schedule notification for the next dose
+                await ScheduleNotification(product, dosage, nextDoseTime, null);
 
-            // Show a confirmation toast with localized text using named parameters
-            var reminderParams = new Dictionary<string, object>
+                // Show a confirmation toast with localized text using named parameters
+                var reminderParams = new Dictionary<string, object>
                 {
                     { "productName", product.Name },
                     { "scheduledTime", nextDoseTime.ToString("g") }
                 };
-            var toast = Toast.Make(LF("Reminder_Scheduled_For", reminderParams), ToastDuration.Short);
-            await toast.Show();
-            _loggerService.Log("NotificationService", $"Notification scheduled for {product.Id} at {nextDoseTime}");
+                var toast = Toast.Make(LF("Reminder_Scheduled_For", reminderParams), ToastDuration.Short);
+                await toast.Show();
+                _loggerService.Log($"Notification scheduled for product {product.Id} with dosage ID {dosage.Id} at {nextDoseTime}");
+            }
         }
 
         public async Task ScheduleNotificationAsync(Product product, DosageSchedule dosage, DateTime nextDoseTime)
@@ -311,150 +321,161 @@ namespace MauiBlazorHybrid.Services
 
         private async Task ScheduleNotification(Product product, DosageSchedule dosage, DateTime scheduleTime, int? notificationId)
         {
-            try
+            using (CallContext.BeginCall())
             {
-                _loggerService.Log("NotificationService", $"Scheduling notification for product {product.Id} at {scheduleTime}");
-                await _semaphore.WaitAsync();
-
-                if (notificationId == null)
+                try
                 {
-                    notificationId = GenerateNotificationId(product.Id, dosage.Id);
-                }
+                    _loggerService.Log($"Scheduling notification for product {product.Id} at {scheduleTime}");
+                    await _semaphore.WaitAsync();
 
-                // Create localized notification message using LF with named parameters
-                var titleParams = new Dictionary<string, object>
+                    if (notificationId == null)
+                    {
+                        notificationId = GenerateNotificationId(product.Id, dosage.Id);
+                    }
+
+                    // Create localized notification message using LF with named parameters
+                    var titleParams = new Dictionary<string, object>
                     {
                         { "productName", product.Name }
                     };
-                string title = LF("Time_To_Take", titleParams);
+                    string title = LF("Time_To_Take", titleParams);
 
-                var messageParams = new Dictionary<string, object>
+                    var messageParams = new Dictionary<string, object>
                     {
                         { "amount", dosage.AmountTaken.ToString() },
                         { "unit", product.Unit },
                         { "productName", product.Name }
                     };
-                string message = LF("Take_Amount_Of", messageParams);
+                    string message = LF("Take_Amount_Of", messageParams);
 
 #if ANDROID
-                // Schedule system alarm for reliable background notifications
-                ScheduleAndroidAlarm(product, dosage, scheduleTime, notificationId ?? 0, title, message);
+                    // Schedule system alarm for reliable background notifications
+                    ScheduleAndroidAlarm(product, dosage, scheduleTime, notificationId ?? 0, title, message);
 #endif
+                }
+                finally
+                {
+                    _semaphore.Release();
+                }
+                _loggerService.Log($"Notification scheduled for product {product.Id} at {scheduleTime}");
             }
-            finally
-            {
-                _semaphore.Release();
-            }
-            _loggerService.Log("NotificationService", $"Notification scheduled for product {product.Id} at {scheduleTime}");
         }
 
 #if ANDROID
         private void ScheduleAndroidAlarm(Product product, DosageSchedule dosage, DateTime scheduleTime, int notificationId, string title, string message)
         {
-            try
+            using (CallContext.BeginCall())
             {
-                _loggerService.Log("NotificationService", $"Scheduling Android alarm for product {product.Id} at {scheduleTime}");
-                var context = Android.App.Application.Context;
-
-                // Cancel any existing alarms for this notification
-                CancelAndroidAlarm(notificationId);
-
-                // Create intent for alarm receiver
-                var intent = new Intent(context, typeof(NotificationAlarmReceiver));
-                intent.PutExtra("notificationId", notificationId);
-                intent.PutExtra("title", title);
-                intent.PutExtra("message", message);
-
-                // Add product and dosage IDs for action handling
-                intent.PutExtra("productId", product.Id);
-                intent.PutExtra("dosageId", dosage.Id);
-
-                // Also pass localized strings for channel and fallbacks
-                intent.PutExtra("channelName", L("Reminders"));
-                intent.PutExtra("channelDesc", L("Reminders_Description"));
-                intent.PutExtra("fallbackTitle", L("Reminder"));
-                intent.PutExtra("fallbackMessage", L("Time_To_Take"));
-
-                // Add localized button text
-                intent.PutExtra("takeNowText", L("Take_Now"));
-                intent.PutExtra("remind15Text", L("Remind_15_Minutes")); // New button text
-                intent.PutExtra("amount", (double)dosage.AmountTaken);
-
-                // Create unique pending intent
-                PendingIntentFlags flags = PendingIntentFlags.UpdateCurrent;
-                if (OperatingSystem.IsAndroidVersionAtLeast(31)) // Android 12+
+                try
                 {
-                    flags |= PendingIntentFlags.Immutable;
-                }
+                    _loggerService.Log($"Scheduling Android alarm for product {product.Id} at {scheduleTime}");
+                    var context = Android.App.Application.Context;
 
-                var pendingIntent = PendingIntent.GetBroadcast(context, notificationId, intent, flags);
+                    // Cancel any existing alarms for this notification
+                    CancelAndroidAlarm(notificationId);
 
-                // Get alarm manager
-                var alarmManager = context.GetSystemService(Context.AlarmService) as AlarmManager;
-                if (alarmManager != null)
-                {
-                    // Convert to milliseconds since epoch
-                    long triggerAtMillis = new DateTimeOffset(scheduleTime).ToUnixTimeMilliseconds();
+                    // Create intent for alarm receiver
+                    var intent = new Intent(context, typeof(NotificationAlarmReceiver));
+                    intent.PutExtra("notificationId", notificationId);
+                    intent.PutExtra("title", title);
+                    intent.PutExtra("message", message);
 
-                    // Schedule with exact timing when possible
+                    // Add product and dosage IDs for action handling
+                    intent.PutExtra("productId", product.Id);
+                    intent.PutExtra("dosageId", dosage.Id);
+
+                    // Also pass localized strings for channel and fallbacks
+                    intent.PutExtra("channelName", L("Reminders"));
+                    intent.PutExtra("channelDesc", L("Reminders_Description"));
+                    intent.PutExtra("fallbackTitle", L("Reminder"));
+                    intent.PutExtra("fallbackMessage", L("Time_To_Take"));
+
+                    // Add localized button text
+                    intent.PutExtra("takeNowText", L("Take_Now"));
+                    intent.PutExtra("remind15Text", L("Remind_15_Minutes")); // New button text
+                    intent.PutExtra("amount", (double)dosage.AmountTaken);
+
+                    // Create unique pending intent
+                    PendingIntentFlags flags = PendingIntentFlags.UpdateCurrent;
                     if (OperatingSystem.IsAndroidVersionAtLeast(31)) // Android 12+
                     {
-                        if (alarmManager.CanScheduleExactAlarms())
+                        flags |= PendingIntentFlags.Immutable;
+                    }
+
+                    var pendingIntent = PendingIntent.GetBroadcast(context, notificationId, intent, flags);
+
+                    // Get alarm manager
+                    var alarmManager = context.GetSystemService(Context.AlarmService) as AlarmManager;
+                    if (alarmManager != null)
+                    {
+                        // Convert to milliseconds since epoch
+                        long triggerAtMillis = new DateTimeOffset(scheduleTime).ToUnixTimeMilliseconds();
+
+                        // Schedule with exact timing when possible
+                        if (OperatingSystem.IsAndroidVersionAtLeast(31)) // Android 12+
+                        {
+                            if (alarmManager.CanScheduleExactAlarms())
+                            {
+                                alarmManager.SetExactAndAllowWhileIdle(AlarmType.RtcWakeup, triggerAtMillis, pendingIntent);
+                            }
+                            else
+                            {
+                                alarmManager.Set(AlarmType.RtcWakeup, triggerAtMillis, pendingIntent);
+                            }
+                        }
+                        else if (OperatingSystem.IsAndroidVersionAtLeast(23)) // Android 6.0+
                         {
                             alarmManager.SetExactAndAllowWhileIdle(AlarmType.RtcWakeup, triggerAtMillis, pendingIntent);
                         }
-                        else
+                        else // Older Android
                         {
-                            alarmManager.Set(AlarmType.RtcWakeup, triggerAtMillis, pendingIntent);
+                            alarmManager.SetExact(AlarmType.RtcWakeup, triggerAtMillis, pendingIntent);
                         }
-                    }
-                    else if (OperatingSystem.IsAndroidVersionAtLeast(23)) // Android 6.0+
-                    {
-                        alarmManager.SetExactAndAllowWhileIdle(AlarmType.RtcWakeup, triggerAtMillis, pendingIntent);
-                    }
-                    else // Older Android
-                    {
-                        alarmManager.SetExact(AlarmType.RtcWakeup, triggerAtMillis, pendingIntent);
-                    }
 
-                    _loggerService.Log("NotificationService", $"Scheduled Android alarm for {product.Name} at {scheduleTime}");
+                        _loggerService.Log($"Scheduled Android alarm for {product.Name} at {scheduleTime}");
+                    }
                 }
-            }
-            catch (System.Exception ex)
-            {
-                _loggerService.Log("NotificationService", $"Error scheduling Android alarm: {ex.Message}");
+                catch (System.Exception ex)
+                {
+                    _loggerService.Log($"Error scheduling Android alarm: {ex.Message}");
+                }
             }
         }
 
         private void CancelAndroidAlarm(int notificationId)
         {
-            try
+            using (CallContext.BeginCall())
             {
-                var context = Android.App.Application.Context;
-
-                // Create matching intent
-                var intent = new Intent(context, typeof(NotificationAlarmReceiver));
-
-                // Create matching pending intent
-                PendingIntentFlags flags = PendingIntentFlags.UpdateCurrent;
-                if (OperatingSystem.IsAndroidVersionAtLeast(31)) // Android 12+
+                try
                 {
-                    flags |= PendingIntentFlags.Immutable;
+                    var context = Android.App.Application.Context;
+
+                    // Create matching intent
+                    var intent = new Intent(context, typeof(NotificationAlarmReceiver));
+
+                    // Create matching pending intent
+                    PendingIntentFlags flags = PendingIntentFlags.UpdateCurrent;
+                    if (OperatingSystem.IsAndroidVersionAtLeast(31)) // Android 12+
+                    {
+                        flags |= PendingIntentFlags.Immutable;
+                    }
+
+                    var pendingIntent = PendingIntent.GetBroadcast(context, notificationId, intent, flags);
+
+                    // Get alarm manager and cancel
+                    var alarmManager = context.GetSystemService(Context.AlarmService) as AlarmManager;
+                    alarmManager?.Cancel(pendingIntent);
+
+                    // Also remove any displayed notification
+                    var notificationManager = NotificationManagerCompat.From(context);
+                    notificationManager.Cancel(notificationId);
+
+                    _loggerService.Log($"Canceled Android alarm for notification ID {notificationId}");
                 }
-
-                var pendingIntent = PendingIntent.GetBroadcast(context, notificationId, intent, flags);
-
-                // Get alarm manager and cancel
-                var alarmManager = context.GetSystemService(Context.AlarmService) as AlarmManager;
-                alarmManager?.Cancel(pendingIntent);
-
-                // Also remove any displayed notification
-                var notificationManager = NotificationManagerCompat.From(context);
-                notificationManager.Cancel(notificationId);
-            }
-            catch (System.Exception ex)
-            {
-                _loggerService.Log("NotificationService", $"Error canceling alarm: {ex.Message}");
+                catch (System.Exception ex)
+                {
+                    _loggerService.Log($"Error canceling alarm: {ex.Message}");
+                }
             }
         }
 #endif
@@ -470,6 +491,7 @@ namespace MauiBlazorHybrid.Services
                 // by looking at all dosages (assuming we can access them)
                 try
                 {
+                    _loggerService.Log($"Canceling notifications for product {productId}...");
                     // Get the product from the ProductService to access its actual dosages
                     var services = Microsoft.Maui.MauiApplication.Current?.Services;
                     if (services != null)
@@ -486,7 +508,7 @@ namespace MauiBlazorHybrid.Services
                                     int notificationId = GenerateNotificationId(productId, dosage.Id);
                                     CancelAndroidAlarm(notificationId);
                                 }
-                                _loggerService.Log("NotificationService", $"Canceled {product.Dosages.Count} notifications for product {productId}");
+                                _loggerService.Log($"Canceled notifications for product {productId}");
                                 return;
                             }
                         }
@@ -494,7 +516,7 @@ namespace MauiBlazorHybrid.Services
                 }
                 catch (System.Exception ex)
                 {
-                    _loggerService.Log("NotificationService", $"Error canceling notifications for product {productId}: {ex.Message}");
+                    _loggerService.Log($"Error canceling notifications for product {productId}: {ex.Message}");
                 }
 #endif
             }
@@ -540,202 +562,205 @@ namespace MauiBlazorHybrid.Services
 
         public override void OnReceive(Context context, Intent intent)
         {
-            try
+            using (CallContext.BeginCall())
             {
-                // Skip showing notifications for boot completed events
-                if (intent.Action == Intent.ActionBootCompleted)
-                {
-                    _loggerService.Log("NotificationService", "Device reboot detected. Not showing notifications immediately.");
-                    return;
-                }
-
-                // Get notification details from intent
-                int notificationId = intent.GetIntExtra("notificationId", 0);
-                int productId = intent.GetIntExtra("productId", 0);
-                int dosageId = intent.GetIntExtra("dosageId", 0);
-                double amount = intent.GetDoubleExtra("amount", 0);
-
-                // Get pre-localized strings from intent extras (already localized by NotificationService)
-                string title = intent.GetStringExtra("title");
-                string message = intent.GetStringExtra("message");
-
-                // If title or message is not available, use the fallback
-                if (string.IsNullOrEmpty(title))
-                {
-                    title = intent.GetStringExtra("fallbackTitle");
-                }
-
-                if (string.IsNullOrEmpty(message))
-                {
-                    message = intent.GetStringExtra("fallbackMessage");
-                }
-
-                // Get pre-localized channel name and description
-                string channelName = intent.GetStringExtra("channelName");
-                string channelDesc = intent.GetStringExtra("channelDesc");
-
-                // Create notification channel
-                string channelId = "product_reminders";
-                if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.O)
-                {
-                    var notificationManager = context.GetSystemService(Context.NotificationService) as NotificationManager;
-                    if (notificationManager != null)
-                    {
-                        var channel = new NotificationChannel(
-                            channelId,
-                            channelName ?? "Reminders",
-                            NotificationImportance.High)
-                        {
-                            Description = channelDesc ?? "Reminder notifications"
-                        };
-                        channel.EnableVibration(true);
-                        notificationManager.CreateNotificationChannel(channel);
-                    }
-                }
-
-                // Create intent for when notification is tapped
-                var resultIntent = context.PackageManager.GetLaunchIntentForPackage(context.PackageName);
-                if (resultIntent == null)
-                {
-                    // Fallback intent
-                    resultIntent = new Intent(context, typeof(MainActivity));
-                }
-                resultIntent.SetFlags(ActivityFlags.NewTask | ActivityFlags.ClearTask);
-
-                // Add action, product ID, and dosage ID to the intent
-                resultIntent.PutExtra("action", "edit_reminder");
-                resultIntent.PutExtra("productId", productId);
-                resultIntent.PutExtra("dosageId", dosageId);
-                resultIntent.PutExtra("remind_later", false);
-
-                _loggerService.Log("NotificationService", $"Setting notification intent with action=edit_reminder, productId={productId}, dosageId={dosageId}");
-
-                // Create pending intent
-                PendingIntentFlags flags = PendingIntentFlags.UpdateCurrent;
-                if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.S)
-                {
-                    flags |= PendingIntentFlags.Immutable;
-                }
-                var pendingIntent = PendingIntent.GetActivity(context, notificationId * 10, resultIntent, flags);
-
-                // Try to find the app icon
-                int iconResource;
                 try
                 {
-                    iconResource = context.Resources.GetIdentifier("icon", "mipmap", context.PackageName);
-                    if (iconResource == 0)
+                    // Skip showing notifications for boot completed events
+                    if (intent.Action == Intent.ActionBootCompleted)
+                    {
+                        _loggerService.Log("Device reboot detected. Not showing notifications immediately.");
+                        return;
+                    }
+
+                    // Get notification details from intent
+                    int notificationId = intent.GetIntExtra("notificationId", 0);
+                    int productId = intent.GetIntExtra("productId", 0);
+                    int dosageId = intent.GetIntExtra("dosageId", 0);
+                    double amount = intent.GetDoubleExtra("amount", 0);
+
+                    // Get pre-localized strings from intent extras (already localized by NotificationService)
+                    string title = intent.GetStringExtra("title");
+                    string message = intent.GetStringExtra("message");
+
+                    // If title or message is not available, use the fallback
+                    if (string.IsNullOrEmpty(title))
+                    {
+                        title = intent.GetStringExtra("fallbackTitle");
+                    }
+
+                    if (string.IsNullOrEmpty(message))
+                    {
+                        message = intent.GetStringExtra("fallbackMessage");
+                    }
+
+                    // Get pre-localized channel name and description
+                    string channelName = intent.GetStringExtra("channelName");
+                    string channelDesc = intent.GetStringExtra("channelDesc");
+
+                    // Create notification channel
+                    string channelId = "product_reminders";
+                    if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.O)
+                    {
+                        var notificationManager = context.GetSystemService(Context.NotificationService) as NotificationManager;
+                        if (notificationManager != null)
+                        {
+                            var channel = new NotificationChannel(
+                                channelId,
+                                channelName ?? "Reminders",
+                                NotificationImportance.High)
+                            {
+                                Description = channelDesc ?? "Reminder notifications"
+                            };
+                            channel.EnableVibration(true);
+                            notificationManager.CreateNotificationChannel(channel);
+                        }
+                    }
+
+                    // Create intent for when notification is tapped
+                    var resultIntent = context.PackageManager.GetLaunchIntentForPackage(context.PackageName);
+                    if (resultIntent == null)
+                    {
+                        // Fallback intent
+                        resultIntent = new Intent(context, typeof(MainActivity));
+                    }
+                    resultIntent.SetFlags(ActivityFlags.NewTask | ActivityFlags.ClearTask);
+
+                    // Add action, product ID, and dosage ID to the intent
+                    resultIntent.PutExtra("action", "edit_reminder");
+                    resultIntent.PutExtra("productId", productId);
+                    resultIntent.PutExtra("dosageId", dosageId);
+                    resultIntent.PutExtra("remind_later", false);
+
+                    _loggerService.Log($"Setting notification intent with action=edit_reminder, productId={productId}, dosageId={dosageId}");
+
+                    // Create pending intent
+                    PendingIntentFlags flags = PendingIntentFlags.UpdateCurrent;
+                    if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.S)
+                    {
+                        flags |= PendingIntentFlags.Immutable;
+                    }
+                    var pendingIntent = PendingIntent.GetActivity(context, notificationId * 10, resultIntent, flags);
+
+                    // Try to find the app icon
+                    int iconResource;
+                    try
+                    {
+                        iconResource = context.Resources.GetIdentifier("icon", "mipmap", context.PackageName);
+                        if (iconResource == 0)
+                        {
+                            iconResource = Android.Resource.Drawable.IcDialogInfo;
+                        }
+                    }
+                    catch
                     {
                         iconResource = Android.Resource.Drawable.IcDialogInfo;
                     }
-                }
-                catch
-                {
-                    iconResource = Android.Resource.Drawable.IcDialogInfo;
-                }
 
-                // Build the notification
-                var notificationBuilder = new NotificationCompat.Builder(context, channelId)
-                    .SetContentTitle(title)
-                    .SetContentText(message)
-                    .SetSmallIcon(iconResource)
-                    .SetContentIntent(pendingIntent)
-                    .SetAutoCancel(true)
-                    .SetDefaults((int)NotificationDefaults.Sound | (int)NotificationDefaults.Vibrate)
-                    .SetPriority(NotificationCompat.PriorityHigh);
+                    // Build the notification
+                    var notificationBuilder = new NotificationCompat.Builder(context, channelId)
+                        .SetContentTitle(title)
+                        .SetContentText(message)
+                        .SetSmallIcon(iconResource)
+                        .SetContentIntent(pendingIntent)
+                        .SetAutoCancel(true)
+                        .SetDefaults((int)NotificationDefaults.Sound | (int)NotificationDefaults.Vibrate)
+                        .SetPriority(NotificationCompat.PriorityHigh);
 
 
-                // Add Take Now action button
-                string takeNowText = intent.GetStringExtra("takeNowText") ?? "Take Now";
-                var takeNowIntent = new Intent(context, typeof(NotificationActionReceiver));
-                takeNowIntent.SetAction("take_now_action");
-                takeNowIntent.PutExtra("notificationId", notificationId);
-                takeNowIntent.PutExtra("productId", productId);
-                takeNowIntent.PutExtra("dosageId", dosageId);
-                takeNowIntent.PutExtra("amount", amount);
+                    // Add Take Now action button
+                    string takeNowText = intent.GetStringExtra("takeNowText") ?? "Take Now";
+                    var takeNowIntent = new Intent(context, typeof(NotificationActionReceiver));
+                    takeNowIntent.SetAction("take_now_action");
+                    takeNowIntent.PutExtra("notificationId", notificationId);
+                    takeNowIntent.PutExtra("productId", productId);
+                    takeNowIntent.PutExtra("dosageId", dosageId);
+                    takeNowIntent.PutExtra("amount", amount);
 
-                var takeNowPendingIntent = PendingIntent.GetBroadcast(
-                    context,
-                    notificationId * 10 + 1, // Unique request code
-                    takeNowIntent,
-                    flags);
+                    var takeNowPendingIntent = PendingIntent.GetBroadcast(
+                        context,
+                        notificationId * 10 + 1, // Unique request code
+                        takeNowIntent,
+                        flags);
 
-                notificationBuilder.AddAction(Android.Resource.Drawable.IcDialogInfo, takeNowText, takeNowPendingIntent);
+                    notificationBuilder.AddAction(Android.Resource.Drawable.IcDialogInfo, takeNowText, takeNowPendingIntent);
 
-                // Add Remind 15 Minutes action button
-                string remind15Text = intent.GetStringExtra("remind15Text") ?? "Remind in 15 Min";
-                var remind15Intent = new Intent(context, typeof(NotificationActionReceiver));
-                remind15Intent.SetAction("remind_15_action");
-                remind15Intent.PutExtra("notificationId", notificationId);
-                remind15Intent.PutExtra("productId", productId);
-                remind15Intent.PutExtra("dosageId", dosageId);
+                    // Add Remind 15 Minutes action button
+                    string remind15Text = intent.GetStringExtra("remind15Text") ?? "Remind in 15 Min";
+                    var remind15Intent = new Intent(context, typeof(NotificationActionReceiver));
+                    remind15Intent.SetAction("remind_15_action");
+                    remind15Intent.PutExtra("notificationId", notificationId);
+                    remind15Intent.PutExtra("productId", productId);
+                    remind15Intent.PutExtra("dosageId", dosageId);
 
-                var remind15PendingIntent = PendingIntent.GetBroadcast(
-                    context,
-                    notificationId * 10 + 2, // Unique request code
-                    remind15Intent,
-                    flags);
+                    var remind15PendingIntent = PendingIntent.GetBroadcast(
+                        context,
+                        notificationId * 10 + 2, // Unique request code
+                        remind15Intent,
+                        flags);
 
-                notificationBuilder.AddAction(Android.Resource.Drawable.IcDialogInfo, remind15Text, remind15PendingIntent);
+                    notificationBuilder.AddAction(Android.Resource.Drawable.IcDialogInfo, remind15Text, remind15PendingIntent);
 
-                // Show the notification
-                var notificationManagerCompat = NotificationManagerCompat.From(context);
+                    // Show the notification
+                    var notificationManagerCompat = NotificationManagerCompat.From(context);
 
-                // Check for notification permission on Android 13+
-                bool canShowNotification = true;
-                if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.Tiramisu)
-                {
-                    try
+                    // Check for notification permission on Android 13+
+                    bool canShowNotification = true;
+                    if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.Tiramisu)
                     {
-                        var pm = context.PackageManager;
-                        var packageInfo = pm.GetPackageInfo(context.PackageName, 0);
-                        var applicationInfo = packageInfo.ApplicationInfo;
-                        int targetSdkVersion = (int)applicationInfo.TargetSdkVersion;
-                        int tiramisuVersion = (int)Android.OS.BuildVersionCodes.Tiramisu;
-
-                        if (targetSdkVersion >= tiramisuVersion)
+                        try
                         {
-                            var permissionStatus = context.CheckSelfPermission(Android.Manifest.Permission.PostNotifications);
-                            canShowNotification = permissionStatus == Permission.Granted;
-                        }
-                    }
-                    catch (System.Exception ex)
-                    {
-                        canShowNotification = false;
-                        _loggerService.Log("NotificationService", $"Error checking notification permission: {ex.Message}");
-                    }
-                }
+                            var pm = context.PackageManager;
+                            var packageInfo = pm.GetPackageInfo(context.PackageName, 0);
+                            var applicationInfo = packageInfo.ApplicationInfo;
+                            int targetSdkVersion = (int)applicationInfo.TargetSdkVersion;
+                            int tiramisuVersion = (int)Android.OS.BuildVersionCodes.Tiramisu;
 
-                if (canShowNotification)
-                {
-                    notificationManagerCompat.Notify(notificationId, notificationBuilder.Build());
-
-                    // Also try to vibrate
-                    try
-                    {
-                        var vibrator = context.GetSystemService(Context.VibratorService) as Vibrator;
-                        if (vibrator != null && vibrator.HasVibrator)
-                        {
-                            if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.O)
+                            if (targetSdkVersion >= tiramisuVersion)
                             {
-                                vibrator.Vibrate(VibrationEffect.CreateOneShot(500, VibrationEffect.DefaultAmplitude));
-                            }
-                            else
-                            {
-                                // Deprecated in API 26
-                                vibrator.Vibrate(500);
+                                var permissionStatus = context.CheckSelfPermission(Android.Manifest.Permission.PostNotifications);
+                                canShowNotification = permissionStatus == Permission.Granted;
                             }
                         }
+                        catch (System.Exception ex)
+                        {
+                            canShowNotification = false;
+                            _loggerService.Log($"Error checking notification permission: {ex.Message}");
+                        }
                     }
-                    catch (System.Exception ex)
+
+                    if (canShowNotification)
                     {
-                        _loggerService.Log("NotificationService", $"Error vibrating device: {ex.Message}");
-                        // Ignore vibration errors
+                        notificationManagerCompat.Notify(notificationId, notificationBuilder.Build());
+
+                        // Also try to vibrate
+                        try
+                        {
+                            var vibrator = context.GetSystemService(Context.VibratorService) as Vibrator;
+                            if (vibrator != null && vibrator.HasVibrator)
+                            {
+                                if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.O)
+                                {
+                                    vibrator.Vibrate(VibrationEffect.CreateOneShot(500, VibrationEffect.DefaultAmplitude));
+                                }
+                                else
+                                {
+                                    // Deprecated in API 26
+                                    vibrator.Vibrate(500);
+                                }
+                            }
+                        }
+                        catch (System.Exception ex)
+                        {
+                            _loggerService.Log($"Error vibrating device: {ex.Message}");
+                            // Ignore vibration errors
+                        }
                     }
                 }
-            }
-            catch (System.Exception ex)
-            {
-                _loggerService.Log("NotificationService", $"Error in NotificationAlarmReceiver: {ex.Message}");
+                catch (System.Exception ex)
+                {
+                    _loggerService.Log($"Error in NotificationAlarmReceiver: {ex.Message}");
+                }
             }
         }
     }
@@ -757,7 +782,7 @@ namespace MauiBlazorHybrid.Services
                 int dosageId = intent.GetIntExtra("dosageId", 0);
                 double amount = intent.GetDoubleExtra("amount", 0);
 
-                _loggerService.Log("NotificationService", $"Action received: {action} for notification ID: {notificationId}");
+                _loggerService.Log($"Action received: {action} for notification ID: {notificationId}");
 
                 // Always cancel the notification when an action is taken
                 var notificationManager = NotificationManagerCompat.From(context);
@@ -765,7 +790,7 @@ namespace MauiBlazorHybrid.Services
 
                 if (action == "take_now_action")
                 {
-                    _loggerService.Log("NotificationService", $"Take Now action triggered for notification ID: {notificationId}");
+                    _loggerService.Log($"Take Now action triggered for notification ID: {notificationId}");
 
                     // Get the IProductService instance from the application context
                     var productService = GetProductService(context);
@@ -789,7 +814,7 @@ namespace MauiBlazorHybrid.Services
                                 toastIntent.PutExtra("message", toastMessage);
                                 context.SendBroadcast(toastIntent);
 
-                                _loggerService.Log("NotificationService", $"TakeProductDoseAsync completed with result: {result}");
+                                _loggerService.Log($"TakeProductDoseAsync completed with result: {result}");
 
                                                      // After taking dose, schedule notifications
                                 if (result)
@@ -811,7 +836,7 @@ namespace MauiBlazorHybrid.Services
                                                 if (dosage.NextDose.HasValue)
                                                 {
                                                     await notificationService.ScheduleNotificationAsync(product, dosage, dosage.NextDose.Value);
-                                                    _loggerService.Log("NotificationService", $"Rescheduled notification for product {productId}, dosage {dosage.Id} at {dosage.NextDose.Value}");
+                                                    _loggerService.Log($"Rescheduled notification for product {productId}, dosage {dosage.Id} at {dosage.NextDose.Value}");
                                                 }
                                             }
                                         }
@@ -820,18 +845,18 @@ namespace MauiBlazorHybrid.Services
                             }
                             catch (System.Exception ex)
                             {
-                                _loggerService.Log("NotificationService", $"Error taking dose: {ex.Message}");
+                                _loggerService.Log($"Error taking dose: {ex.Message}");
                             }
                         });
                     }
                     else
                     {
-                        _loggerService.Log("NotificationService", "Failed to get ProductService instance for TakeNow action");
+                        _loggerService.Log("Failed to get ProductService instance for TakeNow action");
                     }
                 }
                 else if (action == "remind_15_action")
                 {
-                    _loggerService.Log("NotificationService", $"Remind 15 Minutes action triggered for notification ID: {notificationId}");
+                    _loggerService.Log($"Remind 15 Minutes action triggered for notification ID: {notificationId}");
 
                     // Schedule a new notification 15 minutes from now
                     Task.Run(async () =>
@@ -854,7 +879,7 @@ namespace MauiBlazorHybrid.Services
                                         if (dosage != null)
                                         {
                                             await notificationService.ScheduleNotificationAsync(product, dosage, remindTime, notificationId);
-                                            _loggerService.Log("NotificationService", $"Scheduled reminder in 15 minutes for product ID: {productId}, dosage ID: {dosageId}");
+                                            _loggerService.Log($"Scheduled reminder in 15 minutes for product ID: {productId}, dosage ID: {dosageId}");
                                         }
                                     }
                                 }
@@ -862,14 +887,14 @@ namespace MauiBlazorHybrid.Services
                         }
                         catch (System.Exception ex)
                         {
-                            _loggerService.Log("NotificationService", $"Error scheduling reminder in 15 minutes: {ex.Message}");
+                            _loggerService.Log($"Error scheduling reminder in 15 minutes: {ex.Message}");
                         }
                     });
                 }
             }
             catch (System.Exception ex)
             {
-                _loggerService.Log("NotificationService", $"Error in NotificationActionReceiver: {ex.Message}");
+                _loggerService.Log($"Error in NotificationActionReceiver: {ex.Message}");
             }
         }
 
@@ -897,7 +922,7 @@ namespace MauiBlazorHybrid.Services
             }
             catch (System.Exception ex)
             {
-                _loggerService.Log("NotificationService", $"Error getting ProductService: {ex.Message}");
+                _loggerService.Log($"Error getting ProductService: {ex.Message}");
                 return null;
             }
         }
@@ -926,7 +951,7 @@ namespace MauiBlazorHybrid.Services
             }
             catch (System.Exception ex)
             {
-                _loggerService.Log("NotificationService", $"Error getting NotificationService: {ex.Message}");
+                _loggerService.Log($"Error getting NotificationService: {ex.Message}");
                 return null;
             }
         }

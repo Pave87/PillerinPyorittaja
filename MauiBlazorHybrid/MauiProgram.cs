@@ -10,38 +10,42 @@ namespace MauiBlazorHybrid
         public static IServiceProvider Services { get; private set; }
         public static MauiApp CreateMauiApp()
         {
-            var builder = MauiApp.CreateBuilder();
-            builder
-                .UseMauiApp<App>()
-                .UseMauiCommunityToolkit()
-                .UseLocalNotification() // Add this
-                .ConfigureFonts(fonts =>
-                {
-                    fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-                    fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
-                });
+            using (CallContext.BeginCall())
+            {
+                var builder = MauiApp.CreateBuilder();
+                builder
+                    .UseMauiApp<App>()
+                    .UseMauiCommunityToolkit()
+                    .UseLocalNotification() // Add this
+                    .ConfigureFonts(fonts =>
+                    {
+                        fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+                        fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+                    });
 
-            builder.Services.AddMauiBlazorWebView();
+                builder.Services.AddMauiBlazorWebView();
 #if DEBUG
-            builder.Services.AddBlazorWebViewDeveloperTools();
+                builder.Services.AddBlazorWebViewDeveloperTools();
 #endif
 
-            // Register services
-            builder.Services.AddSingleton<IProductService, ProductService>();
-            builder.Services.AddSingleton<MauiBlazorHybrid.Services.INotificationService, NotificationService>();
-            builder.Services.AddSingleton<ILocalizationService, LocalizationService>();
-            builder.Services.AddSingleton<ISettingsService, SettingsService>();
-            builder.Services.AddSingleton<ILoggerService, LoggerService>();
-            //builder.Services.AddSingleton<IAdService, AdService>(); Add support temporarily disabled
+                // Register services
+                builder.Services.AddSingleton<IProductService, ProductService>();
+                builder.Services.AddSingleton<MauiBlazorHybrid.Services.INotificationService, NotificationService>();
+                builder.Services.AddSingleton<ILocalizationService, LocalizationService>();
+                builder.Services.AddSingleton<ISettingsService, SettingsService>();
+                builder.Services.AddSingleton<ILoggerService, LoggerService>();
+                //builder.Services.AddSingleton<IAdService, AdService>(); Add support temporarily disabled
 
-            var app = builder.Build();
-            Services = app.Services;
+                var app = builder.Build();
+                Services = app.Services;
 
-            // Resolve ILoggerService and log the message
-            var loggerService = app.Services.GetService<ILoggerService>();
-            loggerService?.Log("MainProgram", "--------------------------Builder done--------------------------");
+                // Resolve ILoggerService and log the message
+                var loggerService = app.Services.GetService<ILoggerService>();
+                loggerService?.Log("--------------------------Builder done--------------------------");
 
-            return app;
+                return app;
+            }
+
         }
     }
 }
