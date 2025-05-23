@@ -19,7 +19,24 @@ public class ProductService : IProductService
             _loggerService.Log("Initalizing...");
 
             _notificationService = notificationService;
-            _filePath = Path.Combine(FileSystem.AppDataDirectory, "pills.json");
+            // Migration logic: move pills.json to userdata.json if needed
+            var appDataDir = FileSystem.AppDataDirectory;
+            var oldFilePath = Path.Combine(appDataDir, "pills.json");
+            var newFilePath = Path.Combine(appDataDir, "userdata.json");
+            _filePath = newFilePath;
+
+            if (!File.Exists(newFilePath) && File.Exists(oldFilePath))
+            {
+                try
+                {
+                    File.Move(oldFilePath, newFilePath);
+                    _loggerService.Log("Migrated data file from pills.json to userdata.json");
+                }
+                catch (Exception ex)
+                {
+                    _loggerService.Log($"Failed to migrate data file: {ex.Message}");
+                }
+            }
             LoadProducts();
 
             _loggerService.Log("Initialized");
@@ -125,6 +142,44 @@ public class ProductService : IProductService
 
                         // Update the NextDose time
                         dosage.NextDose = CalculateNextDoseTime(dosage, now);
+                    }
+                }
+
+                // For each dosage, if more than 2 missed, auto-skip oldest
+                var missedByDosage = product.MissedDosages
+                    .GroupBy(m => m.DosageId)
+                    .ToList();
+
+                foreach (var group in missedByDosage)
+                {
+                    var missedList = group.OrderBy(m => m.ScheduledTime).ToList();
+                    if (missedList.Count > 2)
+                    {
+                        // Skip all but the 2 most recent
+                        var toSkip = missedList.Take(missedList.Count - 2).ToList();
+                        foreach (var missed in toSkip)
+                        {
+                            // Mark as processed
+                            missed.Processed = true;
+
+                            // Create a history entry for skipping this dose
+                            var historyEntry = new UsageHistory
+                            {
+                                Id = product.History.Count > 0 ? product.History.Max(h => h.Id) + 1 : 1,
+                                ProductId = product.Id,
+                                Timestamp = DateTime.Now,
+                                AmountTaken = 0, // 0 amount for skipped doses
+                                DosageId = missed.DosageId,
+                                ScheduleTime = missed.ScheduledTime,
+                                Event = EventType.Skipped
+                            };
+
+                            product.History.Add(historyEntry);
+
+                            // Remove the missed dosage from the list
+                            product.MissedDosages.Remove(missed);
+                            _loggerService.Log($"Auto-skipped missed dosage: Product ID {product.Id}, Dosage ID {missed.DosageId}, Scheduled {missed.ScheduledTime}");
+                        }
                     }
                 }
             }
