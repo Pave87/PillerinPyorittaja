@@ -4,19 +4,24 @@
 @inject NavigationManager NavigationManager
 
 <div class="test-release-container">
-    <h2>Test Release Information</h2>
 
     <div class="text-block">
-        <h3>Päivitys 0.4.1</h3>
+        <h3>@(version is not null ? $"Päivitys {version}" : "Päivitys")</h3>
     </div>
 
     <div class="text-block">
         <ul>
-            <li>Korjattu ilmoituksia, nyt ilmoituksesta painamalla voit määrittää uuden muistutuksen tai käyttää ota nyt ja muistuta 15 minuutin päästä pika vaihtoehtoja</li>
-            <li>Tuotteen voi määrittää myös tarpeen mukaan otettavaksi</li>
-            <li>Asetukissa valinta jos haluat nähdä viimeisen vuorokauden aikana otetut annokset</li>
-            <li>Jos saldo on pienempi kuin jäljellä oleva määrä on tästä ilmoitus etusivulla</li>
-            <li>Tarjolla myös Discord palvelin <a href="https://discord.gg/tXQ8JXuz" target="_blank">https://discord.gg/tXQ8JXuz</a></li>
+            @if (releaseNotes is not null)
+            {
+                foreach (var note in releaseNotes)
+                {
+                    <li>@((MarkupString)note)</li>
+                }
+            }
+            else
+            {
+                <li>Loading release notes...</li>
+            }
         </ul>
     </div>
 
@@ -67,5 +72,42 @@
 </style>
 
 @code {
+    private string[]? releaseNotes;
+    private string version = null;
 
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadReleaseNotesAsync();
+    }
+
+    private async Task LoadReleaseNotesAsync()
+    {
+        try
+        {
+            using var stream = await FileSystem.OpenAppPackageFileAsync("ReleaseNotes.txt");
+            using var reader = new StreamReader(stream, System.Text.Encoding.UTF8);
+            var lines = new List<string>();
+            while (!reader.EndOfStream)
+            {
+                var line = await reader.ReadLineAsync();
+                if (line != null)
+                    lines.Add(line);
+            }
+
+            if (lines.Count > 0)
+            {
+                version = lines[0];
+                releaseNotes = lines.Skip(1).Where(l => !string.IsNullOrWhiteSpace(l)).ToArray();
+            }
+            else
+            {
+                version = null;
+                releaseNotes = new[] { "Release notes not available." };
+            }
+        }
+        catch
+        {
+            releaseNotes = new[] { "Release notes not available." };
+        }
+    }
 }
