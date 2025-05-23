@@ -412,4 +412,13 @@
 	<data name="Show_Today_Taken_Description" xml:space="preserve">
 		<value>Show taken</value>
 	</data>
+	<data name="Download_User_Data" xml:space="preserve">
+		<value>Save settings</value>
+	</data>
+	<data name="Download_userdata_json" xml:space="preserve">
+		<value>Save</value>
+	</data>
+	<data name="Download_userdata_json_description" xml:space="preserve">
+		<value>You can save settings to your phone as backup</value>
+	</data>
 </root>
