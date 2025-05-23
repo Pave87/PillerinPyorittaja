@@ -15,6 +15,7 @@ namespace MauiBlazorHybrid.Services
     {
         private readonly string _logFilePath;
         private static bool _isLoggingEnabled; // Nullable to indicate uninitialized state
+        private static bool _networkLoggingEnabled = true;
 
         static LoggerService()
         {
@@ -96,18 +97,29 @@ namespace MauiBlazorHybrid.Services
 
         private void SendLogToHost(string message)
         {
-            try
+            if (_networkLoggingEnabled)
             {
-                using var client = new TcpClient();
-                client.Connect("10.0.2.2", 5000); // 10.0.2.2 is the host from emulator
-                using var stream = client.GetStream();
-                var data = Encoding.UTF8.GetBytes(message);
-                stream.Write(data, 0, data.Length);
+                try
+                {
+                    using var client = new TcpClient();
+                    // Set a short timeout to avoid hanging if the host is unreachable
+                    var connectTask = client.ConnectAsync("10.0.2.2", 5000);
+                    if (!connectTask.Wait(TimeSpan.FromMilliseconds(500)))
+                    {
+                        // Timeout: fail fast and disable further network logging
+                        _networkLoggingEnabled = false;
+                        return;
+                    }
+                    using var stream = client.GetStream();
+                    var data = Encoding.UTF8.GetBytes(message);
+                    stream.Write(data, 0, data.Length);
+                }
+                catch (Exception ex)
+                {
+                    _networkLoggingEnabled = false; // Disable network logging on error
+                }
             }
-            catch
-            {
-                // Ignore network errors in logging
-            }
+
         }
     }
 
