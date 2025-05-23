@@ -1,6 +1,7 @@
 ﻿// MauiBlazorHybrid/Services/AdService.cs
 using Microsoft.AspNetCore.Components;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace MauiBlazorHybrid.Services
 {
@@ -15,6 +16,19 @@ namespace MauiBlazorHybrid.Services
     {
         private bool _initialized = false;
         public bool IsAdBannerReady { get; private set; } = false;
+
+        // Inject logger for error reporting
+        private readonly ILoggerService _logger;
+
+        // Ad unit IDs for debug and release
+        private const string DebugAdUnitId = "ca-app-pub-3940256099942544/6300978111"; // Google's test ad unit ID
+        private const string ReleaseAdUnitId = "ca-app-pub-5877003167511519/4434574579"; // TODO: Replace with your real ad unit ID
+
+        public AdService()
+        {
+            // Use the service locator pattern to get the logger, since AdService is likely registered as a singleton
+            _logger = MauiProgram.Services.GetService<ILoggerService>() ?? throw new System.Exception("ILoggerService not registered");
+        }
 
         public async Task InitializeAdsAsync()
         {
@@ -33,12 +47,12 @@ namespace MauiBlazorHybrid.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to initialize ads: {ex.Message}");
-                Console.WriteLine($"Exception stack trace: {ex.StackTrace}");
+                _logger.Log($"Failed to initialize ads: {ex.Message}");
+                _logger.Log($"Exception stack trace: {ex.StackTrace}");
             }
 #else
-                // For non-Android platforms, just mark as initialized
-                _initialized = true;
+            // For non-Android platforms, just mark as initialized
+            _initialized = true;
 #endif
         }
 
@@ -56,8 +70,16 @@ namespace MauiBlazorHybrid.Services
                 var activity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity;
                 if (activity == null)
                 {
+                    _logger.Log("CurrentActivity is null, cannot load banner ad.");
                     return;
                 }
+
+                // Determine which ad unit ID to use
+#if DEBUG
+                string adUnitId = DebugAdUnitId;
+#else
+                string adUnitId = ReleaseAdUnitId;
+#endif
 
                 // Run on UI thread
                 activity.RunOnUiThread(() =>
@@ -67,7 +89,7 @@ namespace MauiBlazorHybrid.Services
                         // Create ad view
                         var adView = new Android.Gms.Ads.AdView(activity)
                         {
-                            AdUnitId = "ca-app-pub-3940256099942544/6300978111", // Google's test ad unit ID
+                            AdUnitId = adUnitId,
                             AdSize = Android.Gms.Ads.AdSize.Banner
                         };
 
@@ -118,23 +140,24 @@ namespace MauiBlazorHybrid.Services
                         }
                         else
                         {
+                            _logger.Log("Root view is null, cannot add ad container.");
                         }
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Error loading banner ad: {ex.Message}");
-                        Console.WriteLine($"Exception stack trace: {ex.StackTrace}");
+                        _logger.Log($"Error loading banner ad: {ex.Message}");
+                        _logger.Log($"Exception stack trace: {ex.StackTrace}");
                     }
                 });
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to load banner ad: {ex.Message}");
-                Console.WriteLine($"Exception stack trace: {ex.StackTrace}");
+                _logger.Log($"Failed to load banner ad: {ex.Message}");
+                _logger.Log($"Exception stack trace: {ex.StackTrace}");
             }
 #else
-                // For other platforms, just mark it as ready
-                IsAdBannerReady = true;
+            // For other platforms, just mark it as ready
+            IsAdBannerReady = true;
 #endif
         }
 

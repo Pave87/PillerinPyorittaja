@@ -34,7 +34,7 @@ namespace MauiBlazorHybrid
                 builder.Services.AddSingleton<ILocalizationService, LocalizationService>();
                 builder.Services.AddSingleton<ISettingsService, SettingsService>();
                 builder.Services.AddSingleton<ILoggerService, LoggerService>();
-                //builder.Services.AddSingleton<IAdService, AdService>(); Add support temporarily disabled
+                builder.Services.AddSingleton<IAdService, AdService>();
 
                 var app = builder.Build();
                 Services = app.Services;
