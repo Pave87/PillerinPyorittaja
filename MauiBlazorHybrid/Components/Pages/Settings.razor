@@ -1,8 +1,10 @@
 ﻿@page "/settings"
 @using MauiBlazorHybrid.Services
 @using MauiBlazorHybrid.Extensions
+@using CommunityToolkit.Maui.Storage
 @inject ILocalizationService LocalizationService
 @inject ISettingsService SettingsService
+@inject ILoggerService LoggerService
 @inherits LocalizeComponent
 
 <h1>@L("Settings")</h1>
@@ -41,6 +43,13 @@
         <span>@L("Needs_Restart")</span>
     </div>
 
+    <div class="setting-card">
+        <h2>@L("Download User Data")</h2>
+        <div class="setting-option">
+            <button class="download-btn" @onclick="DownloadUserDataAsync">@L("Download_userdata_json")</button>
+            <span class="setting-info">@L("Download_userdata_json_description")</span>
+        </div>
+    </div>
 </div>
 
 <style>
@@ -86,6 +95,21 @@
         font-size: 0.9rem;
         padding: 0.5rem;
     }
+
+    .download-btn {
+        padding: 0.75rem 1.5rem;
+        background-color: #0078d4;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        font-size: 1rem;
+        cursor: pointer;
+        margin-right: 1rem;
+    }
+
+    .download-btn:hover {
+        background-color: #005fa3;
+    }
 </style>
 
 @code {
@@ -115,6 +139,38 @@
         set
         {
             SettingsService.ShowTodayTaken = value;
+        }
+    }
+
+    private async Task DownloadUserDataAsync()
+    {
+        try
+        {
+            string fileName = "userdata.json";
+            string filePath = Path.Combine(FileSystem.Current.AppDataDirectory, fileName);
+
+            if (!File.Exists(filePath))
+            {
+                LoggerService.Log("User data file not found: " + filePath);
+                return;
+            }
+
+            using var fileStream = File.OpenRead(filePath);
+
+            var result = await FileSaver.Default.SaveAsync(fileName, fileStream, default);
+
+            if (result.IsSuccessful)
+            {
+                LoggerService.Log($"User data saved to: {result.FilePath}");
+            }
+            else
+            {
+                LoggerService.Log("User cancelled or failed to save user data.");
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggerService.Log(ex);
         }
     }
 }
