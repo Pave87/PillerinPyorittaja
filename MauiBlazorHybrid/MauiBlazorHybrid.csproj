@@ -125,5 +125,8 @@
 	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	  </None>
 	</ItemGroup>
+	<ItemGroup>
+	  <ProjectReference Include="..\MauiBlazorHybrid.Core\MauiBlazorHybrid.Core.csproj" />
+	</ItemGroup>
 
 </Project>

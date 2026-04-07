@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet sln:*)",
+      "Bash(dotnet add:*)",
+      "Bash(dotnet test:*)",
+      "Bash(mv PillerinPyorittaja.Core MauiBlazorHybrid.Core)",
+      "Bash(mv PillerinPyorittaja.Core.Tests MauiBlazorHybrid.Core.Tests)",
+      "Bash(mv MauiBlazorHybrid.Core/PillerinPyorittaja.Core.csproj MauiBlazorHybrid.Core/MauiBlazorHybrid.Core.csproj)",
+      "Bash(mv MauiBlazorHybrid.Core.Tests/PillerinPyorittaja.Core.Tests.csproj MauiBlazorHybrid.Core.Tests/MauiBlazorHybrid.Core.Tests.csproj)",
+      "Bash(find MauiBlazorHybrid.Core MauiBlazorHybrid.Core.Tests -name \"*.cs\" -exec sed -i 's/PillerinPyorittaja\\\\.Core/MauiBlazorHybrid.Core/g' {} +)",
+      "Bash(sed -i 's/PillerinPyorittaja\\\\.Core/MauiBlazorHybrid.Core/g' MauiBlazorHybrid/Services/ProductService.cs)",
+      "Bash(sed -i 's/PillerinPyorittaja\\\\.Core/MauiBlazorHybrid.Core/g' MauiBlazorHybrid/Models/Product.cs)",
+      "Bash(dotnet build:*)",
+      "Bash(dotnet restore:*)",
+      "Bash(ls -d */)",
+      "Bash(mkdir -p MauiBlazorHybrid.Core)",
+      "Bash(dotnet new:*)"
+    ]
+  }
+}
