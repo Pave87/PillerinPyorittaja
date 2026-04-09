@@ -1,7 +1,7 @@
 # Privacy Policy
 ## Data Collection
 
-All data entered by the user is stored locally on the device and is never transmitted, accessed, or shared by the developer.
+All data entered by the user to the app(Pillerin Pyörittäjä) is stored locally on the device and is never transmitted, accessed, or shared by the developer.
 
 ## Third Parties
 
