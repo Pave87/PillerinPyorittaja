@@ -343,6 +343,12 @@
 	<data name="Update_Notes" xml:space="preserve">
 		<value>Update Notes</value>
 	</data>
+	<data name="Update_Header" xml:space="preserve">
+		<value>Update</value>
+	</data>
+	<data name="Update_Header_With_Version" xml:space="preserve">
+		<value>Update {0}</value>
+	</data>
 	<data name="History" xml:space="preserve">
 		<value>History</value>
 	</data>

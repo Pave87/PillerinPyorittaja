@@ -1,0 +1,4 @@
+Version 1.1.0
+Added support for color themes. Light and dark themes are available by default, and users can create their own themes. Themes are stored locally.
+Technical updates that support upcoming development.
+A Discord server is also available <a href="https://discord.gg/j2MThJMkUM" target="_blank">https://discord.gg/j2MThJMkUM</a>

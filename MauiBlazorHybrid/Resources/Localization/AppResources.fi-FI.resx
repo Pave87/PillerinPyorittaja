@@ -343,6 +343,12 @@
 	<data name="Update_Notes" xml:space="preserve">
 		<value>Päivityksen tiedot</value>
 	</data>
+	<data name="Update_Header" xml:space="preserve">
+		<value>Päivitys</value>
+	</data>
+	<data name="Update_Header_With_Version" xml:space="preserve">
+		<value>Päivitys {0}</value>
+	</data>
 	<data name="History" xml:space="preserve">
 		<value>Historia</value>
 	</data>

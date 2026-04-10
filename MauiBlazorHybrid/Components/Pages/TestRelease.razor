@@ -2,11 +2,12 @@
 @using MauiBlazorHybrid.Services
 @using Microsoft.Maui.Storage
 @inject NavigationManager NavigationManager
+@inject ILocalizationService LocalizationService
 
 <div class="test-release-container">
 
     <div class="text-block">
-        <h3>@(version is not null ? $"Päivitys {version}" : "Päivitys")</h3>
+        <h3>@(version is not null ? LocalizationService.GetString("Update_Header_With_Version", version) : LocalizationService.GetString("Update_Header"))</h3>
     </div>
 
     <div class="text-block">
@@ -84,7 +85,17 @@
     {
         try
         {
-            using var stream = await FileSystem.OpenAppPackageFileAsync("ReleaseNotes.txt");
+            var lang = LocalizationService.CurrentCulture.StartsWith("fi", StringComparison.OrdinalIgnoreCase) ? "fi" : "en";
+            Stream stream;
+            try
+            {
+                stream = await FileSystem.OpenAppPackageFileAsync($"ReleaseNotes.{lang}.txt");
+            }
+            catch
+            {
+                stream = await FileSystem.OpenAppPackageFileAsync("ReleaseNotes.en.txt");
+            }
+            using var _stream = stream;
             using var reader = new StreamReader(stream, System.Text.Encoding.UTF8);
             var lines = new List<string>();
             while (!reader.EndOfStream)

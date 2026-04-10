@@ -1,0 +1,4 @@
+Versio 1.1.0
+Lisätty tuki väriteemoille. Oletuksena tarjolla vaalea ja tumma teema, mutta käyttäjät voivat luoda omia teemojaan. Teemat tallennetaan paikallisesti.
+Teknisiä päivityksiä jotka tukevat tulevaa kehitystä.
+Tarjolla myös Discord palvelin <a href="https://discord.gg/j2MThJMkUM" target="_blank">https://discord.gg/j2MThJMkUM</a>
