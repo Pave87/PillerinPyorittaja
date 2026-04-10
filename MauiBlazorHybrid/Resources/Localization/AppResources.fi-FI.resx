@@ -421,4 +421,28 @@
 	<data name="Download_userdata_json_description" xml:space="preserve">
 		<value>Voit tallentaa asetuket jos haluat varmuuskopion</value>
 	</data>
+	<data name="Theme" xml:space="preserve">
+		<value>Teema</value>
+	</data>
+	<data name="Select_Theme" xml:space="preserve">
+		<value>Valitse ulkoasuteema</value>
+	</data>
+	<data name="Theme_Auto" xml:space="preserve">
+		<value>Automaattinen (Järjestelmä)</value>
+	</data>
+	<data name="Theme_Light" xml:space="preserve">
+		<value>Vaalea</value>
+	</data>
+	<data name="Theme_Dark" xml:space="preserve">
+		<value>Tumma</value>
+	</data>
+	<data name="Export_Theme" xml:space="preserve">
+		<value>Vie teema</value>
+	</data>
+	<data name="Import_Theme" xml:space="preserve">
+		<value>Tuo teema</value>
+	</data>
+	<data name="Delete_Theme" xml:space="preserve">
+		<value>Poista teema</value>
+	</data>
 </root>

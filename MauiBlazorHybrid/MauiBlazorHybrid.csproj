@@ -126,6 +126,10 @@
 	  </None>
 	</ItemGroup>
 	<ItemGroup>
+	  <MauiAsset Include="Themes\light.json" LogicalName="Themes/light.json" />
+	  <MauiAsset Include="Themes\dark.json" LogicalName="Themes/dark.json" />
+	</ItemGroup>
+	<ItemGroup>
 	  <ProjectReference Include="..\MauiBlazorHybrid.Core\MauiBlazorHybrid.Core.csproj" />
 	</ItemGroup>
 

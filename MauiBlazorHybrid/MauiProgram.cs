@@ -33,6 +33,7 @@ namespace MauiBlazorHybrid
                 builder.Services.AddSingleton<MauiBlazorHybrid.Services.INotificationService, NotificationService>();
                 builder.Services.AddSingleton<ILocalizationService, LocalizationService>();
                 builder.Services.AddSingleton<ISettingsService, SettingsService>();
+                builder.Services.AddSingleton<IThemeService, ThemeService>();
                 builder.Services.AddSingleton<ILoggerService, LoggerService>();
                 builder.Services.AddSingleton<IAdService, AdService>();
 

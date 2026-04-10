@@ -1,3 +1,0 @@
-﻿Versio 1.0.0
-Ensimmäinen julkinen julkaisu
-Tarjolla myös Discord palvelin <a href="https://discord.gg/j2MThJMkUM" target="_blank">https://discord.gg/j2MThJMkUM</a>

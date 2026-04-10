@@ -1,15 +1,39 @@
-﻿@page "/settings"
+@page "/settings"
 @using MauiBlazorHybrid.Services
 @using MauiBlazorHybrid.Extensions
 @using CommunityToolkit.Maui.Storage
 @inject ILocalizationService LocalizationService
 @inject ISettingsService SettingsService
+@inject IThemeService ThemeService
 @inject ILoggerService LoggerService
 @inherits LocalizeComponent
 
 <h1>@L("Settings")</h1>
 
 <div class="settings-container">
+    <div class="setting-card">
+        <h2>@L("Theme")</h2>
+        <p>@L("Select_Theme")</p>
+
+        <div class="theme-selector-container">
+            <select @bind="SelectedTheme" class="language-dropdown">
+                @foreach (var theme in _availableThemes)
+                {
+                    <option value="@theme">@GetThemeDisplayName(theme)</option>
+                }
+            </select>
+        </div>
+
+        <div class="theme-actions">
+            <button class="download-btn" @onclick="ExportThemeAsync">@L("Export_Theme")</button>
+            <button class="download-btn" @onclick="ImportThemeAsync">@L("Import_Theme")</button>
+            @if (!string.IsNullOrEmpty(SelectedTheme) && SelectedTheme != "auto" && SelectedTheme != "light" && SelectedTheme != "dark")
+            {
+                <button class="delete-theme-btn" @onclick="DeleteCustomThemeAsync">@L("Delete_Theme")</button>
+            }
+        </div>
+    </div>
+
     <div class="setting-card">
         <h2>@L("Language")</h2>
         <p>@L("Select_Language")</p>
@@ -63,56 +87,92 @@
     }
 
     .setting-card {
-        border: 1px solid #ddd;
+        border: 1px solid var(--card-border);
         border-radius: 8px;
         padding: 1.5rem;
-        background-color: #fff;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        background-color: var(--card-background);
+        box-shadow: 0 2px 4px var(--card-shadow);
     }
 
     .setting-card h2 {
         margin-top: 0;
-        color: #333;
+        color: var(--heading-text);
         font-size: 1.5rem;
         font-weight: 500;
     }
 
-    .language-selector-container {
+    .setting-card p {
+        color: var(--secondary-text);
+    }
+
+    .language-selector-container,
+    .theme-selector-container {
         margin-top: 1rem;
     }
 
     .language-dropdown {
         width: 100%;
         padding: 0.75rem;
-        border: 1px solid #ddd;
+        border: 1px solid var(--card-border);
         border-radius: 4px;
         font-size: 1rem;
-        background-color: #f9f9f9;
+        background-color: var(--panel-background-alt);
+        color: var(--body-text);
     }
 
     .setting-info {
-        color: #666;
+        color: var(--secondary-text);
         font-size: 0.9rem;
         padding: 0.5rem;
     }
 
+    .theme-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+
     .download-btn {
         padding: 0.75rem 1.5rem;
-        background-color: #0078d4;
+        background-color: var(--button-confirm-background);
         color: #fff;
         border: none;
         border-radius: 4px;
         font-size: 1rem;
         cursor: pointer;
-        margin-right: 1rem;
     }
 
     .download-btn:hover {
-        background-color: #005fa3;
+        background-color: var(--button-confirm-background-hover);
+    }
+
+    .delete-theme-btn {
+        padding: 0.75rem 1.5rem;
+        background-color: var(--button-delete-background);
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        font-size: 1rem;
+        cursor: pointer;
     }
 </style>
 
 @code {
+    private List<string> _availableThemes = new() { "auto", "light", "dark" };
+
+    private string SelectedTheme
+    {
+        get => ThemeService.CurrentTheme;
+        set
+        {
+            if (value != ThemeService.CurrentTheme)
+            {
+                _ = ThemeService.SetThemeAsync(value);
+            }
+        }
+    }
+
     private string SelectedCulture
     {
         get => LocalizationService.CurrentCulture;
@@ -124,6 +184,7 @@
             }
         }
     }
+
     private bool IsDebugEnabled
     {
         get => SettingsService.IsDebugEnabled;
@@ -139,6 +200,95 @@
         set
         {
             SettingsService.ShowTodayTaken = value;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _availableThemes = await ThemeService.GetAvailableThemesAsync();
+    }
+
+    private string GetThemeDisplayName(string theme)
+    {
+        return theme switch
+        {
+            "auto" => L("Theme_Auto"),
+            "light" => L("Theme_Light"),
+            "dark" => L("Theme_Dark"),
+            _ => theme
+        };
+    }
+
+    private async Task ExportThemeAsync()
+    {
+        try
+        {
+            var resolvedTheme = ThemeService.CurrentTheme == "auto" ? ThemeService.ResolvedTheme : ThemeService.CurrentTheme;
+            var stream = await ThemeService.ExportThemeAsync(resolvedTheme);
+            if (stream != null)
+            {
+                var result = await FileSaver.Default.SaveAsync($"{resolvedTheme}.json", stream, default);
+                if (result.IsSuccessful)
+                {
+                    LoggerService.Log($"Theme exported to: {result.FilePath}");
+                }
+                await stream.DisposeAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggerService.Log($"Error exporting theme: {ex.Message}");
+        }
+    }
+
+    private async Task ImportThemeAsync()
+    {
+        try
+        {
+            var fileResult = await FilePicker.PickAsync(new PickOptions
+            {
+                PickerTitle = L("Import_Theme"),
+                FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
+                {
+                    { DevicePlatform.Android, new[] { "application/json" } },
+                    { DevicePlatform.iOS, new[] { "public.json" } },
+                    { DevicePlatform.WinUI, new[] { ".json" } }
+                })
+            });
+
+            if (fileResult != null)
+            {
+                using var stream = await fileResult.OpenReadAsync();
+                var themeName = await ThemeService.ImportThemeAsync(stream, fileResult.FileName);
+                if (themeName != null)
+                {
+                    _availableThemes = await ThemeService.GetAvailableThemesAsync();
+                    await ThemeService.SetThemeAsync(themeName);
+                    StateHasChanged();
+                    LoggerService.Log($"Theme imported: {themeName}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggerService.Log($"Error importing theme: {ex.Message}");
+        }
+    }
+
+    private async Task DeleteCustomThemeAsync()
+    {
+        try
+        {
+            var deleted = await ThemeService.DeleteCustomThemeAsync(SelectedTheme);
+            if (deleted)
+            {
+                _availableThemes = await ThemeService.GetAvailableThemesAsync();
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggerService.Log($"Error deleting theme: {ex.Message}");
         }
     }
 

@@ -65,8 +65,8 @@
         margin: 20px 0;
     }
     .json-display {
-        background-color: #f8f9fa;
-        border: 1px solid #dee2e6;
+        background-color: var(--panel-background);
+        border: 1px solid var(--input-divider-border);
         border-radius: 4px;
         padding: 15px;
         overflow-x: auto;
@@ -84,7 +84,7 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background-color: rgba(0,0,0,0.5);
+        background-color: var(--modal-overlay-background);
         z-index: 1000;
         display: flex;
         justify-content: center;
@@ -92,12 +92,12 @@
     }
 
     .modal-content {
-        background-color: white;
+        background-color: var(--card-background);
         border-radius: 8px;
         width: 90%;
         max-width: 90%;
         max-height: 90vh;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        box-shadow: 0 5px 15px var(--modal-shadow);
         display: flex;
         flex-direction: column;
     }
@@ -107,7 +107,7 @@
         justify-content: space-between;
         align-items: center;
         padding: 10px 15px;
-        border-bottom: 1px solid #dee2e6;
+        border-bottom: 1px solid var(--input-divider-border);
     }
 
     .modal-body {
@@ -119,11 +119,11 @@
     .close-button {
         font-size: 24px;
         cursor: pointer;
-        color: #555;
+        color: var(--close-button-text);
     }
 
     .close-button:hover {
-        color: black;
+        color: var(--heading-text);
     }
 </style>
 

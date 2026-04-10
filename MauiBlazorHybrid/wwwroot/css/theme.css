@@ -1,0 +1,104 @@
+/* Theme CSS Variables - Light theme defaults */
+/* These values match the current hardcoded colors exactly, so the light theme looks identical to the original app */
+
+:root {
+    /* Page backgrounds */
+    --page-background: #ffffff;
+    --panel-background: #f8f9fa;
+    --panel-background-alt: #f9f9f9;
+
+    /* Topbar */
+    --topbar-background: #f7f7f7;
+    --topbar-border: #d6d5d5;
+
+    /* Text */
+    --body-text: #212529;
+    --heading-text: #333333;
+    --secondary-text: #666666;
+    --muted-text: #6c757d;
+    --close-button-text: #555555;
+
+    /* Cards */
+    --card-background: #ffffff;
+    --card-border: #dddddd;
+    --card-divider-border: #eeeeee;
+    --card-shadow: rgba(0, 0, 0, 0.1);
+
+    /* Inputs */
+    --input-border: #ced4da;
+    --input-divider-border: #dee2e6;
+    --input-valid-border: #26b050;
+    --input-invalid-border: #e50000;
+
+    /* Links & focus */
+    --link-text: #006bb7;
+    --focus-ring: #258cfb;
+
+    /* Row highlight accent (list rows, cards) */
+    --row-accent-border: #17a2b8;
+
+    /* Buttons - Default (Bootstrap-style primary) */
+    --button-default-background: #1b6ec2;
+    --button-default-border: #1861ac;
+
+    /* Buttons - Confirm (download backup, primary confirm action) */
+    --button-confirm-background: #0078d4;
+    --button-confirm-background-hover: #005fa3;
+
+    /* Buttons - Action (take dose, pagination active, save new product) */
+    --button-action-background: #0d6efd;
+
+    /* Buttons - Save (add product, save reminder, copy config, success badges) */
+    --button-save-background: #28a745;
+
+    /* Buttons - Edit */
+    --button-edit-background: #007bff;
+
+    /* Buttons - Delete */
+    --button-delete-background: #dc3545;
+
+    /* Buttons - Cancel (neutral / secondary) */
+    --button-cancel-background: #6c757d;
+
+    /* Alerts - Warning */
+    --alert-warning-background: #fff3cd;
+    --alert-warning-border: #ffecb5;
+    --alert-warning-text: #664d03;
+    --status-warning-accent-border: #ffc107;
+    --reminder-time-upcoming-text: #ff9800;
+
+    /* Status - Missed dose */
+    --status-missed-background: #f8d7da;
+    --status-missed-text: #721c24;
+
+    /* Status - Event badges (history) */
+    --status-taken-background: #d1e7dd;
+    --status-taken-text: #146c43;
+    --status-refilled-background: #cfe2ff;
+    --status-refilled-text: #0a58ca;
+    --status-neutral-background: #e2e3e5;
+    --status-neutral-text: #495057;
+    --status-modified-background: #fff3cd;
+    --status-modified-text: #997404;
+    --status-removed-background: #f8d7da;
+    --status-removed-text: #b02a37;
+
+    /* Sidebar / Navigation */
+    --sidebar-background-start: rgb(5, 39, 103);
+    --sidebar-background-end: #3a0647;
+    --sidebar-toolbar-background: rgba(0,0,0,0.4);
+    --sidebar-link-text: #d7d7d7;
+    --sidebar-link-background-active: rgba(255,255,255,0.37);
+    --sidebar-link-background-hover: rgba(255,255,255,0.1);
+    --sidebar-toggler-border: rgba(255, 255, 255, 0.1);
+    --sidebar-toggler-checked: rgba(255, 255, 255, 0.5);
+
+    /* Modal / Popup / Overlay */
+    --modal-overlay-background: rgba(0, 0, 0, 0.5);
+    --modal-shadow: rgba(0, 0, 0, 0.3);
+    --popup-shadow: rgba(0, 0, 0, 0.2);
+
+    /* Error */
+    --error-background: lightyellow;
+    --error-boundary-background: #b32121;
+}

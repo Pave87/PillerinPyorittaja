@@ -421,4 +421,28 @@
 	<data name="Download_userdata_json_description" xml:space="preserve">
 		<value>You can save settings to your phone as backup</value>
 	</data>
+	<data name="Theme" xml:space="preserve">
+		<value>Theme</value>
+	</data>
+	<data name="Select_Theme" xml:space="preserve">
+		<value>Select appearance theme</value>
+	</data>
+	<data name="Theme_Auto" xml:space="preserve">
+		<value>Auto (System)</value>
+	</data>
+	<data name="Theme_Light" xml:space="preserve">
+		<value>Light</value>
+	</data>
+	<data name="Theme_Dark" xml:space="preserve">
+		<value>Dark</value>
+	</data>
+	<data name="Export_Theme" xml:space="preserve">
+		<value>Export theme</value>
+	</data>
+	<data name="Import_Theme" xml:space="preserve">
+		<value>Import theme</value>
+	</data>
+	<data name="Delete_Theme" xml:space="preserve">
+		<value>Delete theme</value>
+	</data>
 </root>

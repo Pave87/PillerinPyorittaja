@@ -91,7 +91,7 @@ else
         flex-wrap: wrap;
         gap: 1rem;
         margin-bottom: 1.5rem;
-        background-color: #f8f9fa;
+        background-color: var(--panel-background);
         padding: 1rem;
         border-radius: 8px;
     }
@@ -105,13 +105,13 @@ else
     .filter-select {
         padding: 0.5rem;
         border-radius: 4px;
-        border: 1px solid #ced4da;
+        border: 1px solid var(--input-border);
         margin-top: 0.25rem;
     }
 
     .filter-button {
         padding: 0.5rem 1rem;
-        background-color: #0d6efd;
+        background-color: var(--button-action-background);
         color: white;
         border: none;
         border-radius: 4px;
@@ -131,18 +131,18 @@ else
         justify-content: space-between;
         align-items: center;
         padding: 0.75rem;
-        background-color: #f8f9fa;
+        background-color: var(--panel-background);
         border-radius: 8px;
-        border-left: 4px solid #17a2b8;
+        border-left: 4px solid var(--row-accent-border);
     } */
     .history-item {
         display: flex;
         justify-content: flex-start; /* Changed from space-between */
         align-items: center;
         padding: 0.75rem;
-        background-color: #f8f9fa;
+        background-color: var(--panel-background);
         border-radius: 8px;
-        border-left: 4px solid #17a2b8;
+        border-left: 4px solid var(--row-accent-border);
         gap: 0.8rem; /* Added explicit gap between items */
     }
 
@@ -167,7 +167,7 @@ else
 
     .history-amount {
         font-size: 0.9rem;
-        color: #6c757d;
+        color: var(--muted-text);
     }
 
 /*     .history-time {
@@ -195,7 +195,7 @@ else
 
     .history-schedule-time {
         font-size: 0.9rem;
-        color: #6c757d;
+        color: var(--muted-text);
     }
 
 /*     .history-event {
@@ -224,33 +224,33 @@ else
         }
 
     .event-usage, .event-taken {
-        background-color: #d1e7dd;
-        color: #146c43;
+        background-color: var(--status-taken-background);
+        color: var(--status-taken-text);
     }
 
     .event-refilled {
-        background-color: #cfe2ff;
-        color: #0a58ca;
+        background-color: var(--status-refilled-background);
+        color: var(--status-refilled-text);
     }
 
     .event-created {
-        background-color: #e2e3e5;
-        color: #495057;
+        background-color: var(--status-neutral-background);
+        color: var(--status-neutral-text);
     }
 
     .event-modified {
-        background-color: #fff3cd;
-        color: #997404;
+        background-color: var(--status-modified-background);
+        color: var(--status-modified-text);
     }
 
     .event-removed {
-        background-color: #f8d7da;
-        color: #b02a37;
+        background-color: var(--status-removed-background);
+        color: var(--status-removed-text);
     }
 
     .event-skipped {
-        background-color: #e2e3e5;
-        color: #495057;
+        background-color: var(--status-neutral-background);
+        color: var(--status-neutral-text);
     }
 
     /* Custom popup styles */
@@ -260,7 +260,7 @@ else
         left: 0;
         right: 0;
         bottom: 0;
-        background-color: rgba(0, 0, 0, 0.5);
+        background-color: var(--modal-overlay-background);
         z-index: 999;
         opacity: 0;
         transition: opacity 0.3s ease;
@@ -277,9 +277,9 @@ else
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%) scale(0.9);
-        background-color: white;
+        background-color: var(--card-background);
         border-radius: 8px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 4px 16px var(--popup-shadow);
         z-index: 1000;
         width: 90%;
         max-width: 400px;
@@ -299,7 +299,7 @@ else
         justify-content: space-between;
         align-items: center;
         padding: 16px;
-        border-bottom: 1px solid #eee;
+        border-bottom: 1px solid var(--card-divider-border);
     }
 
     .popup-title {
@@ -313,7 +313,7 @@ else
         font-size: 1.5rem;
         cursor: pointer;
         padding: 0;
-        color: #6c757d;
+        color: var(--muted-text);
     }
 
     .popup-body {
@@ -342,7 +342,7 @@ else
     }
 
     .popup-button-no {
-        background-color: #6c757d;
+        background-color: var(--muted-text);
         color: white;
     }
 </style>

@@ -1,5 +1,8 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 @using MauiBlazorHybrid.Components.Pages
+@using MauiBlazorHybrid.Services
+@inject IThemeService ThemeService
+@inject IJSRuntime JSRuntime
 
 <div class="page">
     <div class="sidebar">
@@ -13,3 +16,35 @@
     </main>
     <AdBanner />
 </div>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await ThemeService.InitializeAsync();
+            await ApplyThemeAsync();
+            ThemeService.ThemeChanged += OnThemeChanged;
+        }
+    }
+
+    private async void OnThemeChanged(object? sender, EventArgs e)
+    {
+        await InvokeAsync(async () =>
+        {
+            await ApplyThemeAsync();
+            StateHasChanged();
+        });
+    }
+
+    private async Task ApplyThemeAsync()
+    {
+        var variables = await ThemeService.GetThemeVariablesAsync(ThemeService.CurrentTheme);
+        await JSRuntime.InvokeVoidAsync("themeInterop.applyTheme", variables);
+    }
+
+    public void Dispose()
+    {
+        ThemeService.ThemeChanged -= OnThemeChanged;
+    }
+}
