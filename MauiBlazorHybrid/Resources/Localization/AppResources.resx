@@ -451,4 +451,111 @@
 	<data name="Delete_Theme" xml:space="preserve">
 		<value>Delete theme</value>
 	</data>
+
+	<!-- Backup -->
+	<data name="Backup" xml:space="preserve">
+		<value>Backup</value>
+	</data>
+	<data name="Backup_Server_Address" xml:space="preserve">
+		<value>Server address</value>
+	</data>
+	<data name="Backup_Device_Name" xml:space="preserve">
+		<value>Device name</value>
+	</data>
+	<data name="Test_Connection" xml:space="preserve">
+		<value>Test Connection</value>
+	</data>
+	<data name="Connection_Success" xml:space="preserve">
+		<value>Connected</value>
+	</data>
+	<data name="Connection_Failed" xml:space="preserve">
+		<value>Connection failed</value>
+	</data>
+	<data name="Backup_Now" xml:space="preserve">
+		<value>Backup Now</value>
+	</data>
+	<data name="Backing_Up" xml:space="preserve">
+		<value>Backing up...</value>
+	</data>
+	<data name="Backup_Success" xml:space="preserve">
+		<value>Backup successful</value>
+	</data>
+	<data name="Backup_Failed" xml:space="preserve">
+		<value>Backup failed</value>
+	</data>
+	<data name="Restore" xml:space="preserve">
+		<value>Restore</value>
+	</data>
+	<data name="Restore_Latest" xml:space="preserve">
+		<value>Restore Latest</value>
+	</data>
+	<data name="Restoring" xml:space="preserve">
+		<value>Restoring...</value>
+	</data>
+	<data name="List_Backups" xml:space="preserve">
+		<value>List Backups</value>
+	</data>
+	<data name="No_Backups_Found" xml:space="preserve">
+		<value>No backups found</value>
+	</data>
+	<data name="Restore_Confirm" xml:space="preserve">
+		<value>Are you sure? Current data will be replaced.</value>
+	</data>
+	<data name="Restore_Warning" xml:space="preserve">
+		<value>Warning: This restore will cause data loss.</value>
+	</data>
+	<data name="Restore_Products_Lost" xml:space="preserve">
+		<value>Products that will be removed</value>
+	</data>
+	<data name="Restore_Products_Added" xml:space="preserve">
+		<value>Products that will be added</value>
+	</data>
+	<data name="Restore_Products_Modified" xml:space="preserve">
+		<value>Products that will be modified</value>
+	</data>
+	<data name="Restore_History_Lost" xml:space="preserve">
+		<value>History records that will be lost</value>
+	</data>
+	<data name="Restore_Identical" xml:space="preserve">
+		<value>Backup is identical to current data. Nothing to restore.</value>
+	</data>
+	<data name="Restore_Success" xml:space="preserve">
+		<value>Restore completed successfully.</value>
+	</data>
+	<data name="Restore_Failed" xml:space="preserve">
+		<value>Restore failed.</value>
+	</data>
+	<data name="OK" xml:space="preserve">
+		<value>OK</value>
+	</data>
+	<data name="Sync_From_Device" xml:space="preserve">
+		<value>Sync from device</value>
+	</data>
+	<data name="Auto_Backup" xml:space="preserve">
+		<value>Automatic backup</value>
+	</data>
+	<data name="Auto_Backup_Interval" xml:space="preserve">
+		<value>Backup interval</value>
+	</data>
+	<data name="Backup_Account_Id" xml:space="preserve">
+		<value>Account ID</value>
+	</data>
+	<data name="Backup_Account_Id_Description" xml:space="preserve">
+		<value>Created automatically on first backup. Enter an existing ID to link this device to the same account.</value>
+	</data>
+	<data name="Backup_Password" xml:space="preserve">
+		<value>Encryption password</value>
+	</data>
+	<data name="Backup_Password_Description" xml:space="preserve">
+		<value>If set, backups are encrypted before uploading. Use the same password on all devices.</value>
+	</data>
+	<data name="Backup_Password_Set" xml:space="preserve">
+		<value>Activate</value>
+	</data>
+	<data name="Backup_Password_Set_Success" xml:space="preserve">
+		<value>Encryption activated</value>
+	</data>
+	<data name="Backup_Password_Set_Failed" xml:space="preserve">
+		<value>Activation failed</value>
+	</data>
 </root>

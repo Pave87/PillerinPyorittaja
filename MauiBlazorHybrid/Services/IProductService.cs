@@ -18,4 +18,5 @@ public interface IProductService
     Task<List<MissedDosage>> GetMissedDosagesAsync(int? productId = null);
     Task<bool> SkipMissedDosageAsync(int productId, int missedDosageId);
     Task<bool> TakeMissedDosage(int productId, int missedDosageId, double amountTaken);
+    Task ReloadAsync();
 }

@@ -451,4 +451,111 @@
 	<data name="Delete_Theme" xml:space="preserve">
 		<value>Poista teema</value>
 	</data>
+
+	<!-- Varmuuskopiointi -->
+	<data name="Backup" xml:space="preserve">
+		<value>Varmuuskopiointi</value>
+	</data>
+	<data name="Backup_Server_Address" xml:space="preserve">
+		<value>Palvelimen osoite</value>
+	</data>
+	<data name="Backup_Device_Name" xml:space="preserve">
+		<value>Laitteen nimi</value>
+	</data>
+	<data name="Test_Connection" xml:space="preserve">
+		<value>Testaa yhteys</value>
+	</data>
+	<data name="Connection_Success" xml:space="preserve">
+		<value>Yhdistetty</value>
+	</data>
+	<data name="Connection_Failed" xml:space="preserve">
+		<value>Yhteys epäonnistui</value>
+	</data>
+	<data name="Backup_Now" xml:space="preserve">
+		<value>Varmuuskopioi nyt</value>
+	</data>
+	<data name="Backing_Up" xml:space="preserve">
+		<value>Varmuuskopioidaan...</value>
+	</data>
+	<data name="Backup_Success" xml:space="preserve">
+		<value>Varmuuskopiointi onnistui</value>
+	</data>
+	<data name="Backup_Failed" xml:space="preserve">
+		<value>Varmuuskopiointi epäonnistui</value>
+	</data>
+	<data name="Restore" xml:space="preserve">
+		<value>Palauta</value>
+	</data>
+	<data name="Restore_Latest" xml:space="preserve">
+		<value>Palauta viimeisin</value>
+	</data>
+	<data name="Restoring" xml:space="preserve">
+		<value>Palautetaan...</value>
+	</data>
+	<data name="List_Backups" xml:space="preserve">
+		<value>Listaa varmuuskopiot</value>
+	</data>
+	<data name="No_Backups_Found" xml:space="preserve">
+		<value>Varmuuskopioita ei löytynyt</value>
+	</data>
+	<data name="Restore_Confirm" xml:space="preserve">
+		<value>Oletko varma? Nykyiset tiedot korvataan.</value>
+	</data>
+	<data name="Restore_Warning" xml:space="preserve">
+		<value>Varoitus: Palautus aiheuttaa tietojen menetystä.</value>
+	</data>
+	<data name="Restore_Products_Lost" xml:space="preserve">
+		<value>Tuotteet jotka poistetaan</value>
+	</data>
+	<data name="Restore_Products_Added" xml:space="preserve">
+		<value>Tuotteet jotka lisätään</value>
+	</data>
+	<data name="Restore_Products_Modified" xml:space="preserve">
+		<value>Tuotteet jotka muuttuvat</value>
+	</data>
+	<data name="Restore_History_Lost" xml:space="preserve">
+		<value>Historiatietueita jotka menetetään</value>
+	</data>
+	<data name="Restore_Identical" xml:space="preserve">
+		<value>Varmuuskopio on identtinen nykyisten tietojen kanssa. Ei palautettavaa.</value>
+	</data>
+	<data name="Restore_Success" xml:space="preserve">
+		<value>Palautus onnistui.</value>
+	</data>
+	<data name="Restore_Failed" xml:space="preserve">
+		<value>Palautus epäonnistui.</value>
+	</data>
+	<data name="OK" xml:space="preserve">
+		<value>OK</value>
+	</data>
+	<data name="Sync_From_Device" xml:space="preserve">
+		<value>Synkronoi laitteelta</value>
+	</data>
+	<data name="Auto_Backup" xml:space="preserve">
+		<value>Automaattinen varmuuskopiointi</value>
+	</data>
+	<data name="Auto_Backup_Interval" xml:space="preserve">
+		<value>Varmuuskopioinnin aikaväli</value>
+	</data>
+	<data name="Backup_Account_Id" xml:space="preserve">
+		<value>Tilitunniste</value>
+	</data>
+	<data name="Backup_Account_Id_Description" xml:space="preserve">
+		<value>Luodaan automaattisesti ensimmäisellä varmuuskopioinnilla. Syötä olemassa oleva tunniste liittääksesi tämän laitteen samaan tiliin.</value>
+	</data>
+	<data name="Backup_Password" xml:space="preserve">
+		<value>Salausavain</value>
+	</data>
+	<data name="Backup_Password_Description" xml:space="preserve">
+		<value>Jos asetettu, varmuuskopiot salataan ennen lähettämistä. Käytä samaa salasanaa kaikilla laitteilla.</value>
+	</data>
+	<data name="Backup_Password_Set" xml:space="preserve">
+		<value>Aktivoi</value>
+	</data>
+	<data name="Backup_Password_Set_Success" xml:space="preserve">
+		<value>Salaus aktivoitu</value>
+	</data>
+	<data name="Backup_Password_Set_Failed" xml:space="preserve">
+		<value>Aktivointi epäonnistui</value>
+	</data>
 </root>

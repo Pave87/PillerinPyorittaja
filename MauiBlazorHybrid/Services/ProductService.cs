@@ -411,6 +411,20 @@ public class ProductService : IProductService
             _loggerService.Log($"Notifications rescheduled for product {pill.Id}");
         }
     }
+    /// <summary>
+    /// Reloads products from disk. LoadProducts() internally triggers
+    /// ProcessMissedDosages() as fire-and-forget, so no need to call it again here.
+    /// </summary>
+    public async Task ReloadAsync()
+    {
+        using (CallContext.BeginCall())
+        {
+            _loggerService.Log("Reloading products from file...");
+            LoadProducts();
+            _loggerService.Log("Products reloaded successfully.");
+        }
+    }
+
     public async Task<bool> TakeMissedDosage(int productId, int missedDosageId, double amountTaken)
     {
         using (CallContext.BeginCall())

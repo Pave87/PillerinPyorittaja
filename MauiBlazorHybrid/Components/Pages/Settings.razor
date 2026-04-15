@@ -1,11 +1,13 @@
 @page "/settings"
 @using MauiBlazorHybrid.Services
 @using MauiBlazorHybrid.Extensions
+@using MauiBlazorHybrid.Models
 @using CommunityToolkit.Maui.Storage
 @inject ILocalizationService LocalizationService
 @inject ISettingsService SettingsService
 @inject IThemeService ThemeService
 @inject ILoggerService LoggerService
+@inject IBackupService BackupService
 @inherits LocalizeComponent
 
 <h1>@L("Settings")</h1>
@@ -73,6 +75,177 @@
             <button class="download-btn" @onclick="DownloadUserDataAsync">@L("Download_userdata_json")</button>
         </div>
         <span>@L("Download_userdata_json_description")</span>
+    </div>
+
+    <div class="setting-card">
+        <h2>@L("Backup")</h2>
+
+        <div class="backup-field">
+            <label>@L("Backup_Server_Address")</label>
+            <input type="text" class="backup-input" @bind="_serverUrl" @bind:after="SaveServerUrl" placeholder="192.168.1.100:5199" />
+        </div>
+
+        <div class="backup-field">
+            <label>@L("Backup_Device_Name")</label>
+            <input type="text" class="backup-input" @bind="_deviceId" @bind:after="SaveDeviceId" placeholder="my-phone" />
+        </div>
+
+        <div class="backup-field">
+            <label>@L("Backup_Account_Id")</label>
+            <p class="backup-hint">@L("Backup_Account_Id_Description")</p>
+            <input type="text" class="backup-input" @bind="_accountId" @bind:after="SaveAccountId" placeholder="" />
+        </div>
+
+        <div class="backup-field">
+            <label>@L("Backup_Password")</label>
+            <p class="backup-hint">@L("Backup_Password_Description")</p>
+            <input type="password" class="backup-input" @bind="_password" @bind:after="SavePassword" placeholder="" />
+        </div>
+
+        <div class="backup-actions">
+            <button class="download-btn" @onclick="TestConnectionAsync" disabled="@_isTesting">
+                @L("Test_Connection")
+            </button>
+            @if (_connectionStatus == true)
+            {
+                <span class="backup-status backup-success">@L("Connection_Success")</span>
+            }
+            else if (_connectionStatus == false)
+            {
+                <span class="backup-status backup-fail">@L("Connection_Failed")</span>
+            }
+        </div>
+
+        <div class="backup-actions">
+            <button class="download-btn" @onclick="BackupNowAsync" disabled="@(_isBackingUp || !IsBackupConfigured)">
+                @(_isBackingUp ? L("Backing_Up") : L("Backup_Now"))
+            </button>
+            @if (_backupStatus == true)
+            {
+                <span class="backup-status backup-success">@L("Backup_Success")</span>
+            }
+            else if (_backupStatus == false)
+            {
+                <span class="backup-status backup-fail">@L("Backup_Failed")</span>
+            }
+        </div>
+
+        <hr class="backup-divider" />
+
+        <div class="backup-actions">
+            <button class="download-btn" @onclick="RestoreLatestAsync" disabled="@(_isRestoring || !IsBackupConfigured)">
+                @(_isRestoring ? L("Restoring") : L("Restore_Latest"))
+            </button>
+            <button class="download-btn" @onclick="ListBackupsAsync" disabled="@(!IsBackupConfigured)">
+                @L("List_Backups")
+            </button>
+        </div>
+
+        @if (_restorePreview != null)
+        {
+            <div class="backup-confirm">
+                @if (_restorePreview.HasDestructiveChanges)
+                {
+                    <p>@L("Restore_Warning")</p>
+                    @if (_restorePreview.RemovedProducts.Count > 0)
+                    {
+                        <p>@L("Restore_Products_Lost"): @string.Join(", ", _restorePreview.RemovedProducts)</p>
+                    }
+                    @if (_restorePreview.LostHistoryEntries > 0)
+                    {
+                        <p>@L("Restore_History_Lost"): @_restorePreview.LostHistoryEntries</p>
+                    }
+                    @if (_restorePreview.AddedProducts.Count > 0)
+                    {
+                        <p>@L("Restore_Products_Added"): @string.Join(", ", _restorePreview.AddedProducts)</p>
+                    }
+                    @if (_restorePreview.ModifiedProducts.Count > 0)
+                    {
+                        <p>@L("Restore_Products_Modified"): @string.Join(", ", _restorePreview.ModifiedProducts)</p>
+                    }
+                    <button class="download-btn" @onclick="ApplyRestoreAsync">@L("Yes")</button>
+                    <button class="delete-theme-btn" @onclick="CancelRestore">@L("No")</button>
+                }
+                else if (_restorePreview.IsIdentical)
+                {
+                    <p>@L("Restore_Identical")</p>
+                    <button class="delete-theme-btn" @onclick="CancelRestore">@L("OK")</button>
+                }
+            </div>
+        }
+
+        @if (_restoreStatus != null)
+        {
+            <div class="backup-confirm">
+                <p>@(_restoreStatus == true ? L("Restore_Success") : L("Restore_Failed"))</p>
+                <button class="delete-theme-btn" @onclick="() => _restoreStatus = null">@L("OK")</button>
+            </div>
+        }
+
+        @if (_backups != null && _backups.Count > 0)
+        {
+            <div class="backup-list">
+                @foreach (var backup in _backups)
+                {
+                    <div class="backup-list-item">
+                        <span>@backup.Timestamp.ToLocalTime().ToString("g") — @((backup.SizeBytes / 1024.0).ToString("F1")) KB</span>
+                        <span class="backup-device-tag">@backup.DeviceId</span>
+                        <button class="download-btn backup-restore-btn" @onclick="() => BeginRestore(backup.DeviceId, backup.Id)">
+                            @L("Restore")
+                        </button>
+                    </div>
+                }
+            </div>
+        }
+        else if (_backups != null && _backups.Count == 0)
+        {
+            <p class="backup-empty">@L("No_Backups_Found")</p>
+        }
+
+        @if (_devices != null && _devices.Count > 1)
+        {
+            <hr class="backup-divider" />
+            <div class="backup-field">
+                <label>@L("Sync_From_Device")</label>
+                <div class="backup-input-row">
+                    <select class="language-dropdown" @bind="_selectedSyncDevice">
+                        <option value="">--</option>
+                        @foreach (var device in _devices.Where(d => d != _deviceId))
+                        {
+                            <option value="@device">@device</option>
+                        }
+                    </select>
+                    <button class="download-btn" @onclick="SyncFromDeviceAsync"
+                            disabled="@(string.IsNullOrEmpty(_selectedSyncDevice) || _isRestoring)">
+                        @L("Restore_Latest")
+                    </button>
+                </div>
+            </div>
+        }
+
+        <hr class="backup-divider" />
+
+        <div class="backup-field">
+            <label class="debug-checkbox-label">
+                <input type="checkbox" checked="@_autoBackupEnabled" @onchange="ToggleAutoBackup" />
+                <span>@L("Auto_Backup")</span>
+            </label>
+        </div>
+        @if (_autoBackupEnabled)
+        {
+            <div class="backup-field">
+                <label>@L("Auto_Backup_Interval")</label>
+                <select class="language-dropdown" @bind="AutoBackupInterval">
+                    <option value="15">15 min</option>
+                    <option value="30">30 min</option>
+                    <option value="60">1 h</option>
+                    <option value="120">2 h</option>
+                    <option value="360">6 h</option>
+                    <option value="720">12 h</option>
+                    <option value="1440">24 h</option>
+                </select>
+            </div>
+        }
     </div>
 </div>
 
@@ -156,6 +329,118 @@
         font-size: 1rem;
         cursor: pointer;
     }
+
+    .backup-field {
+        margin-bottom: 0.75rem;
+    }
+
+    .backup-field label {
+        display: block;
+        margin-bottom: 0.25rem;
+        color: var(--secondary-text);
+        font-size: 0.9rem;
+    }
+
+    .backup-input-row {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .backup-input {
+        flex: 1;
+        padding: 0.75rem;
+        border: 1px solid var(--card-border);
+        border-radius: 4px;
+        font-size: 1rem;
+        background-color: var(--panel-background-alt);
+        color: var(--body-text);
+    }
+
+    .backup-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+
+    .backup-status {
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    .backup-success {
+        color: #4caf50;
+    }
+
+    .backup-fail {
+        color: #f44336;
+    }
+
+    .backup-divider {
+        border: none;
+        border-top: 1px solid var(--card-border);
+        margin: 0.75rem 0;
+    }
+
+    .backup-confirm {
+        padding: 0.75rem;
+        border: 1px solid #f44336;
+        border-radius: 4px;
+        margin-bottom: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .backup-confirm p {
+        width: 100%;
+        margin: 0 0 0.25rem 0;
+    }
+
+    .backup-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .backup-list-item {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem;
+        border: 1px solid var(--card-border);
+        border-radius: 4px;
+        font-size: 0.85rem;
+    }
+
+    .backup-device-tag {
+        background-color: var(--panel-background-alt);
+        padding: 0.15rem 0.5rem;
+        border-radius: 3px;
+        font-size: 0.8rem;
+    }
+
+    .backup-restore-btn {
+        margin-left: auto;
+        padding: 0.4rem 0.75rem;
+        font-size: 0.85rem;
+    }
+
+    .backup-hint {
+        color: var(--secondary-text);
+        font-size: 0.8rem;
+        margin: 0 0 0.25rem 0;
+    }
+
+    .backup-empty {
+        color: var(--secondary-text);
+        font-style: italic;
+    }
 </style>
 
 @code {
@@ -206,6 +491,13 @@
     protected override async Task OnInitializedAsync()
     {
         _availableThemes = await ThemeService.GetAvailableThemesAsync();
+
+        // Load backup settings
+        _serverUrl = SettingsService.BackupServerUrl;
+        _deviceId = SettingsService.DeviceId;
+        _accountId = SettingsService.AccountId;
+        _password = SettingsService.BackupPassword;
+        _autoBackupEnabled = SettingsService.AutoBackupEnabled;
     }
 
     private string GetThemeDisplayName(string theme)
@@ -289,6 +581,290 @@
         catch (Exception ex)
         {
             LoggerService.Log($"Error deleting theme: {ex.Message}");
+        }
+    }
+
+    #region Backup Fields
+
+    private string _serverUrl = string.Empty;
+    private string _deviceId = string.Empty;
+    private string _accountId = string.Empty;
+    private string _password = string.Empty;
+    private bool? _connectionStatus;
+    private bool _isTesting;
+    private bool _isBackingUp;
+    private bool? _backupStatus;
+    private bool _isRestoring;
+    private string? _pendingRestoreDeviceId;
+    private string? _pendingRestoreBackupId;
+    private RestorePreview? _restorePreview;
+    private bool? _restoreStatus;
+    private List<BackupInfo>? _backups;
+    private List<string>? _devices;
+    private string _selectedSyncDevice = string.Empty;
+    private bool _autoBackupEnabled;
+
+    #endregion
+
+    private bool IsBackupConfigured =>
+        !string.IsNullOrWhiteSpace(_serverUrl) &&
+        !string.IsNullOrWhiteSpace(_deviceId);
+
+    private int AutoBackupInterval
+    {
+        get => SettingsService.AutoBackupIntervalMinutes;
+        set
+        {
+            SettingsService.AutoBackupIntervalMinutes = value;
+            if (_autoBackupEnabled)
+            {
+                BackupService.StartAutoBackup();
+            }
+        }
+    }
+
+    private void SaveServerUrl()
+    {
+        SettingsService.BackupServerUrl = _serverUrl;
+        _connectionStatus = null;
+        _backupStatus = null;
+    }
+
+    private void SaveDeviceId()
+    {
+        SettingsService.DeviceId = _deviceId;
+    }
+
+    private void SaveAccountId()
+    {
+        SettingsService.AccountId = _accountId;
+    }
+
+    private void SavePassword()
+    {
+        SettingsService.BackupPassword = _password;
+    }
+
+    private async Task TestConnectionAsync()
+    {
+        _isTesting = true;
+        _connectionStatus = null;
+        StateHasChanged();
+
+        try
+        {
+            _connectionStatus = await BackupService.TestConnectionAsync();
+        }
+        catch
+        {
+            _connectionStatus = false;
+        }
+        finally
+        {
+            _isTesting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task BackupNowAsync()
+    {
+        _isBackingUp = true;
+        _backupStatus = null;
+        StateHasChanged();
+
+        try
+        {
+            // Auto-register account if needed
+            if (string.IsNullOrWhiteSpace(SettingsService.AccountId))
+            {
+                var accountId = await BackupService.RegisterAccountAsync();
+                if (string.IsNullOrEmpty(accountId))
+                {
+                    _backupStatus = false;
+                    return;
+                }
+                _accountId = accountId;
+            }
+
+            _backupStatus = await BackupService.BackupAsync();
+
+            // Refresh device list after backup
+            _devices = await BackupService.ListDevicesAsync();
+        }
+        catch
+        {
+            _backupStatus = false;
+        }
+        finally
+        {
+            _isBackingUp = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ListBackupsAsync()
+    {
+        _backups = await BackupService.ListBackupsAsync();
+
+        // Also fetch from other devices
+        _devices = await BackupService.ListDevicesAsync();
+        if (_devices != null)
+        {
+            foreach (var device in _devices.Where(d => d != _deviceId))
+            {
+                var deviceBackups = await BackupService.ListBackupsAsync(device);
+                _backups.AddRange(deviceBackups);
+            }
+            _backups = _backups.OrderByDescending(b => b.Timestamp).ToList();
+        }
+    }
+
+    #region Restore Methods
+
+    /// <summary>
+    /// Starts a restore from a specific backup in the backup list.
+    /// </summary>
+    private async Task BeginRestore(string deviceId, string backupId)
+    {
+        _pendingRestoreDeviceId = deviceId;
+        _pendingRestoreBackupId = backupId;
+        await PreviewRestoreAsync();
+    }
+
+    /// <summary>
+    /// Starts a restore of the latest backup from the current device.
+    /// </summary>
+    private async Task RestoreLatestAsync()
+    {
+        _pendingRestoreDeviceId = null;
+        _pendingRestoreBackupId = null;
+        await PreviewRestoreAsync();
+    }
+
+    /// <summary>
+    /// Starts a restore of the latest backup from a selected sync device.
+    /// </summary>
+    private async Task SyncFromDeviceAsync()
+    {
+        if (string.IsNullOrEmpty(_selectedSyncDevice)) return;
+
+        _pendingRestoreDeviceId = _selectedSyncDevice;
+        _pendingRestoreBackupId = null;
+        await PreviewRestoreAsync();
+    }
+
+    /// <summary>
+    /// Downloads the backup and builds a preview diff against current data.
+    /// If the restore is safe (additive only), applies it immediately.
+    /// If destructive changes are detected, shows a confirmation dialog.
+    /// </summary>
+    private async Task PreviewRestoreAsync()
+    {
+        _isRestoring = true;
+        _restorePreview = null;
+        _restoreStatus = null;
+        StateHasChanged();
+
+        try
+        {
+            RestorePreview? preview;
+            if (_pendingRestoreBackupId != null && _pendingRestoreDeviceId != null)
+            {
+                preview = await BackupService.PreviewRestoreAsync(_pendingRestoreDeviceId, _pendingRestoreBackupId);
+            }
+            else if (_pendingRestoreDeviceId != null)
+            {
+                preview = await BackupService.PreviewRestoreLatestAsync(_pendingRestoreDeviceId);
+            }
+            else
+            {
+                preview = await BackupService.PreviewRestoreLatestAsync();
+            }
+
+            if (preview == null)
+            {
+                _restoreStatus = false;
+                return;
+            }
+
+            if (preview.IsIdentical)
+            {
+                // Nothing to do — show info message
+                _restorePreview = preview;
+                return;
+            }
+
+            if (!preview.HasDestructiveChanges)
+            {
+                // Safe restore — apply immediately without confirmation
+                var success = await BackupService.ApplyRestoreAsync(preview);
+                _restoreStatus = success;
+                return;
+            }
+
+            // Destructive changes — show confirmation dialog
+            _restorePreview = preview;
+        }
+        catch
+        {
+            _restoreStatus = false;
+        }
+        finally
+        {
+            _isRestoring = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// User confirmed the destructive restore — apply it.
+    /// </summary>
+    private async Task ApplyRestoreAsync()
+    {
+        if (_restorePreview == null) return;
+
+        _isRestoring = true;
+        StateHasChanged();
+
+        try
+        {
+            var success = await BackupService.ApplyRestoreAsync(_restorePreview);
+            _restoreStatus = success;
+        }
+        catch
+        {
+            _restoreStatus = false;
+        }
+        finally
+        {
+            _restorePreview = null;
+            _isRestoring = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// User cancelled the destructive restore.
+    /// </summary>
+    private void CancelRestore()
+    {
+        _restorePreview = null;
+    }
+
+    #endregion
+
+    private void ToggleAutoBackup(ChangeEventArgs e)
+    {
+        _autoBackupEnabled = (bool)(e.Value ?? false);
+        SettingsService.AutoBackupEnabled = _autoBackupEnabled;
+
+        if (_autoBackupEnabled)
+        {
+            BackupService.StartAutoBackup();
+        }
+        else
+        {
+            BackupService.StopAutoBackup();
         }
     }
 

@@ -36,6 +36,7 @@ namespace MauiBlazorHybrid
                 builder.Services.AddSingleton<IThemeService, ThemeService>();
                 builder.Services.AddSingleton<ILoggerService, LoggerService>();
                 builder.Services.AddSingleton<IAdService, AdService>();
+                builder.Services.AddSingleton<IBackupService, BackupService>();
 
                 var app = builder.Build();
                 Services = app.Services;
