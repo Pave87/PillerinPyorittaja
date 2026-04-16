@@ -537,6 +537,12 @@
 	<data name="Auto_Backup_Interval" xml:space="preserve">
 		<value>Varmuuskopioinnin aikaväli</value>
 	</data>
+	<data name="Backup_On_Change" xml:space="preserve">
+		<value>Varmuuskopioi muutoksissa</value>
+	</data>
+	<data name="Backup_On_Change_Description" xml:space="preserve">
+		<value>Varmuuskopioi automaattisesti kun tuotetta lisätään, muokataan tai otetaan</value>
+	</data>
 	<data name="Backup_Account_Id" xml:space="preserve">
 		<value>Tilitunniste</value>
 	</data>
@@ -557,5 +563,8 @@
 	</data>
 	<data name="Backup_Password_Set_Failed" xml:space="preserve">
 		<value>Aktivointi epäonnistui</value>
+	</data>
+	<data name="Backup_Non_Private_Warning" xml:space="preserve">
+		<value>Tämä palvelinosoite ei ole yksityisessä verkossa. Varmuuskopiosi saatetaan lähettää kolmannelle osapuolelle.</value>
 	</data>
 </root>

@@ -19,4 +19,7 @@ public interface IProductService
     Task<bool> SkipMissedDosageAsync(int productId, int missedDosageId);
     Task<bool> TakeMissedDosage(int productId, int missedDosageId, double amountTaken);
     Task ReloadAsync();
+
+    /// <summary>Raised after any mutating operation (add, update, delete, take dose, skip, add packet, etc.).</summary>
+    event Action? DataChanged;
 }

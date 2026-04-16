@@ -537,6 +537,12 @@
 	<data name="Auto_Backup_Interval" xml:space="preserve">
 		<value>Backup interval</value>
 	</data>
+	<data name="Backup_On_Change" xml:space="preserve">
+		<value>Backup on data change</value>
+	</data>
+	<data name="Backup_On_Change_Description" xml:space="preserve">
+		<value>Automatically back up whenever a product is added, changed, or consumed</value>
+	</data>
 	<data name="Backup_Account_Id" xml:space="preserve">
 		<value>Account ID</value>
 	</data>
@@ -557,5 +563,8 @@
 	</data>
 	<data name="Backup_Password_Set_Failed" xml:space="preserve">
 		<value>Activation failed</value>
+	</data>
+	<data name="Backup_Non_Private_Warning" xml:space="preserve">
+		<value>This server address is not on a private network. Your backups may be sent to a third party.</value>
 	</data>
 </root>

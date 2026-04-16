@@ -28,6 +28,9 @@ namespace MauiBlazorHybrid.Services
         /// <summary>When true, the BackupService runs a periodic auto-backup timer.</summary>
         bool AutoBackupEnabled { get; set; }
 
+        /// <summary>When true, a backup is triggered automatically after any product data change.</summary>
+        bool BackupOnChangeEnabled { get; set; }
+
         /// <summary>Interval in minutes between auto-backup attempts.</summary>
         int AutoBackupIntervalMinutes { get; set; }
 
@@ -116,6 +119,17 @@ namespace MauiBlazorHybrid.Services
             set
             {
                 Preferences.Default.Set(AUTO_BACKUP_INTERVAL_KEY, value);
+                SettingsChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        private const string BACKUP_ON_CHANGE_ENABLED_KEY = "backup_on_change_enabled";
+        public bool BackupOnChangeEnabled
+        {
+            get => Preferences.Default.Get(BACKUP_ON_CHANGE_ENABLED_KEY, false);
+            set
+            {
+                Preferences.Default.Set(BACKUP_ON_CHANGE_ENABLED_KEY, value);
                 SettingsChanged?.Invoke(this, EventArgs.Empty);
             }
         }

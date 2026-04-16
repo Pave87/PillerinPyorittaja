@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using System.Text.Json;
 using MauiBlazorHybrid.Core;
 using MauiBlazorHybrid.Models;
@@ -16,6 +18,7 @@ internal class BackupService : IBackupService
     private readonly IProductService _productService;
     private readonly ISettingsService _settingsService;
     private readonly ILoggerService _loggerService;
+    private readonly BackupOnChangeHandler _backupOnChangeHandler;
     private Timer? _autoBackupTimer;
     private readonly object _timerLock = new();
 
@@ -35,10 +38,18 @@ internal class BackupService : IBackupService
         _settingsService = settingsService;
         _loggerService = loggerService;
 
+        _backupOnChangeHandler = new BackupOnChangeHandler(
+            isEnabled: () => _settingsService.BackupOnChangeEnabled,
+            testConnection: TestConnectionAsync,
+            runBackup: BackupAsync,
+            log: msg => _loggerService.Log(msg));
+
         if (_settingsService.AutoBackupEnabled)
         {
             StartAutoBackup();
         }
+
+        _productService.DataChanged += _backupOnChangeHandler.OnDataChanged;
     }
 
     #endregion
@@ -451,6 +462,54 @@ internal class BackupService : IBackupService
         _autoBackupTimer?.Dispose();
         _autoBackupTimer = null;
         _loggerService.Log("Auto-backup stopped");
+    }
+
+    public void NotifyDataChanged()
+    {
+        _backupOnChangeHandler.OnDataChanged();
+    }
+
+    #endregion
+
+    #region Server Address Validation
+
+    public async Task<bool> IsNonPrivateServerAsync()
+    {
+        try
+        {
+            var baseUrl = GetBaseUrl();
+            if (string.IsNullOrWhiteSpace(baseUrl))
+                return false;
+
+            var uri = new Uri(baseUrl);
+            var host = uri.Host;
+
+            IPAddress[] addresses;
+            if (IPAddress.TryParse(host, out var directIp))
+            {
+                addresses = [directIp];
+            }
+            else
+            {
+                addresses = await Dns.GetHostAddressesAsync(host);
+            }
+
+            if (addresses.Length == 0)
+                return false;
+
+            foreach (var address in addresses)
+            {
+                if (!NetworkAddressHelper.IsPrivateAddress(address))
+                    return true;
+            }
+
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _loggerService.Log($"Server address check failed: {ex.Message}");
+            return false;
+        }
     }
 
     #endregion

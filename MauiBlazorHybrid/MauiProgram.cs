@@ -45,6 +45,9 @@ namespace MauiBlazorHybrid
                 var loggerService = app.Services.GetService<ILoggerService>();
                 loggerService?.Log("--------------------------Builder done--------------------------");
 
+                // Eagerly resolve IBackupService so it subscribes to DataChanged events at startup
+                app.Services.GetService<IBackupService>();
+
                 return app;
             }
 

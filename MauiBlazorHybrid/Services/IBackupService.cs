@@ -66,4 +66,17 @@ public interface IBackupService
     /// Stops the periodic auto-backup timer if one is running.
     /// </summary>
     void StopAutoBackup();
+
+    /// <summary>
+    /// Called when product data has changed. If backup-on-change is enabled,
+    /// triggers a backup asynchronously in the background.
+    /// </summary>
+    void NotifyDataChanged();
+
+    /// <summary>
+    /// Resolves the configured backup server URL and returns true if it
+    /// points to a non-private (public) IP address. Returns false when
+    /// the address is private, loopback, link-local, or cannot be resolved.
+    /// </summary>
+    Task<bool> IsNonPrivateServerAsync();
 }

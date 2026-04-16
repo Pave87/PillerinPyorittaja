@@ -12,6 +12,8 @@ public class ProductService : IProductService
 
     private readonly ILoggerService _loggerService; // Injected logger service
 
+    public event Action? DataChanged;
+
     public ProductService(INotificationService notificationService)
     {
         using (CallContext.BeginCall())
@@ -61,6 +63,7 @@ public class ProductService : IProductService
                 await UpdateProductAsync(product);
 
                 _loggerService.Log($"Added {amountToAdd} to product {productId}. New quantity: {product.Quantity}");
+                DataChanged?.Invoke();
                 return true;
             }
             catch
@@ -156,6 +159,7 @@ public class ProductService : IProductService
             // Schedule notifications for new product
             await ScheduleNotificationsForProduct(product);
             _loggerService.Log($"Scheduled notifications for new product {product.Id}");
+            DataChanged?.Invoke();
             return product;
         }
     }
@@ -190,6 +194,7 @@ public class ProductService : IProductService
                 }
             }
             _loggerService.Log($"Product with ID {product.Id} updated successfully");
+            DataChanged?.Invoke();
         }
     }
 
@@ -204,6 +209,7 @@ public class ProductService : IProductService
             _products.RemoveAll(p => p.Id == id);
             await SaveProductsAsync();
             _loggerService.Log($"Product with ID {id} deleted successfully");
+            DataChanged?.Invoke();
         }
     }
 
@@ -239,6 +245,7 @@ public class ProductService : IProductService
             }
 
             _loggerService.Log($"Product dose taken successfully: Product ID {productId}, Amount {amount}, Dosage ID {dosageId}");
+            DataChanged?.Invoke();
             return true;
         }
     }
@@ -268,6 +275,7 @@ public class ProductService : IProductService
 
             await SaveProductsAsync();
             _loggerService.Log($"Missed dosage skipped successfully: Product ID {productId}, Missed Dosage ID {missedDosageId}");
+            DataChanged?.Invoke();
             return true;
         }
     }
@@ -346,6 +354,7 @@ public class ProductService : IProductService
                     await _notificationService.CancelNotificationsAsync(product.Id);
                     await ScheduleNotificationsForProduct(product);
                 }
+                DataChanged?.Invoke();
             }
             _loggerService.Log($"Product history added manually: Product ID {history.ProductId}, Event {history.Event}");
         }
@@ -444,6 +453,7 @@ public class ProductService : IProductService
             await ScheduleNotificationsForProduct(product);
 
             _loggerService.Log($"Missed dosage taken successfully: Product ID {productId}, Missed Dosage ID {missedDosageId}");
+            DataChanged?.Invoke();
             return true;
         }
     }

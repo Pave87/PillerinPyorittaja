@@ -85,6 +85,13 @@
             <input type="text" class="backup-input" @bind="_serverUrl" @bind:after="SaveServerUrl" placeholder="192.168.1.100:5199" />
         </div>
 
+        @if (_isNonPrivateServer)
+        {
+            <div class="backup-warning">
+                <span>⚠️ @L("Backup_Non_Private_Warning")</span>
+            </div>
+        }
+
         <div class="backup-field">
             <label>@L("Backup_Device_Name")</label>
             <input type="text" class="backup-input" @bind="_deviceId" @bind:after="SaveDeviceId" placeholder="my-phone" />
@@ -246,6 +253,14 @@
                 </select>
             </div>
         }
+
+        <div class="backup-field">
+            <label class="debug-checkbox-label">
+                <input type="checkbox" checked="@_backupOnChangeEnabled" @onchange="ToggleBackupOnChange" />
+                <span>@L("Backup_On_Change")</span>
+            </label>
+            <p class="backup-hint">@L("Backup_On_Change_Description")</p>
+        </div>
     </div>
 </div>
 
@@ -441,6 +456,16 @@
         color: var(--secondary-text);
         font-style: italic;
     }
+
+    .backup-warning {
+        padding: 0.6rem 0.75rem;
+        border: 1px solid #ff9800;
+        border-radius: 4px;
+        background-color: rgba(255, 152, 0, 0.1);
+        color: #e65100;
+        font-size: 0.85rem;
+        margin-bottom: 0.75rem;
+    }
 </style>
 
 @code {
@@ -498,6 +523,12 @@
         _accountId = SettingsService.AccountId;
         _password = SettingsService.BackupPassword;
         _autoBackupEnabled = SettingsService.AutoBackupEnabled;
+        _backupOnChangeEnabled = SettingsService.BackupOnChangeEnabled;
+
+        if (!string.IsNullOrWhiteSpace(_serverUrl))
+        {
+            _isNonPrivateServer = await BackupService.IsNonPrivateServerAsync();
+        }
     }
 
     private string GetThemeDisplayName(string theme)
@@ -603,6 +634,8 @@
     private List<string>? _devices;
     private string _selectedSyncDevice = string.Empty;
     private bool _autoBackupEnabled;
+    private bool _backupOnChangeEnabled;
+    private bool _isNonPrivateServer;
 
     #endregion
 
@@ -623,11 +656,13 @@
         }
     }
 
-    private void SaveServerUrl()
+    private async Task SaveServerUrl()
     {
         SettingsService.BackupServerUrl = _serverUrl;
         _connectionStatus = null;
         _backupStatus = null;
+        _isNonPrivateServer = await BackupService.IsNonPrivateServerAsync();
+        StateHasChanged();
     }
 
     private void SaveDeviceId()
@@ -866,6 +901,12 @@
         {
             BackupService.StopAutoBackup();
         }
+    }
+
+    private void ToggleBackupOnChange(ChangeEventArgs e)
+    {
+        _backupOnChangeEnabled = (bool)(e.Value ?? false);
+        SettingsService.BackupOnChangeEnabled = _backupOnChangeEnabled;
     }
 
     private async Task DownloadUserDataAsync()
